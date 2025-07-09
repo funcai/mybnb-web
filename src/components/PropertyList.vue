@@ -17,6 +17,7 @@ const handleCardClick = (property: Property) => {
 </script>
 
 <template>
+  <!-- Loading skeleton - always show when loading -->
   <div v-if="isLoading" class="space-y-4">
     <div 
       v-for="i in 6" 
@@ -37,12 +38,14 @@ const handleCardClick = (property: Property) => {
     </div>
   </div>
 
-  <div v-else-if="properties.length === 0" class="text-center py-12">
+  <!-- No results message - only show when not loading and no properties -->
+  <div v-else-if="!isLoading && properties.length === 0" class="text-center py-12">
     <div class="text-slate-400 text-lg">No properties found</div>
     <div class="text-slate-500 text-sm mt-2">Try a different search term</div>
   </div>
 
-  <div v-else class="space-y-4">
+  <!-- Properties list - only show when not loading and have properties -->
+  <div v-else-if="!isLoading && properties.length > 0" class="space-y-4">
     <PropertyCard
       v-for="property in properties"
       :key="property.id"

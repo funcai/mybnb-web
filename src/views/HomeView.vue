@@ -1,26 +1,27 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import SearchBar from '../components/SearchBar.vue';
-import PropertyList from '../components/PropertyList.vue';
-import type { Property } from '../types/property';
-import { searchProperties } from '../services/api';
+import { ref } from 'vue'
+import SearchBar from '../components/SearchBar.vue'
+import PropertyList from '../components/PropertyList.vue'
+import type { Property } from '../types/property'
+import { searchProperties } from '../services/api'
 
-const properties = ref<Property[]>([]);
-const isLoading = ref(false);
-const hasSearched = ref(false);
+const properties = ref<Property[]>([])
+const isLoading = ref(false)
+const hasSearched = ref(false)
 
 const handleSearch = async (query: string) => {
-  isLoading.value = true;
+  isLoading.value = true
+  hasSearched.value = true // Set this immediately so PropertyList renders
+  properties.value = [] // Clear previous results to show skeleton
   try {
-    const results = await searchProperties(query);
-    properties.value = results;
-    hasSearched.value = true;
+    const results = await searchProperties(query)
+    properties.value = results
   } catch (error) {
-    console.error('Search failed:', error);
+    console.error('Search failed:', error)
   } finally {
-    isLoading.value = false;
+    isLoading.value = false
   }
-};
+}
 </script>
 
 <template>
@@ -28,8 +29,11 @@ const handleSearch = async (query: string) => {
     <div class="container mx-auto px-4 py-8">
       <!-- Header -->
       <div class="text-center mb-12">
-        <h1 class="text-5xl font-bold text-white mb-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-          mybnb
+        <img src="/logo.png" alt="MyBnB logo" class="w-24 h-24 mx-auto mb-4" />
+        <h1
+          class="text-5xl font-bold text-white mb-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent"
+        >
+          myBnB
         </h1>
         <p class="text-slate-300 text-lg max-w-2xl mx-auto">
           Find your perfect furnished apartment for short-term and long-term stays
@@ -45,9 +49,7 @@ const handleSearch = async (query: string) => {
           <h2 class="text-2xl font-semibold text-white mb-2">
             {{ isLoading ? 'Searching...' : `${properties.length} properties found` }}
           </h2>
-          <p class="text-slate-400">
-            Discover amazing places to stay in Germany
-          </p>
+          <p class="text-slate-400">Discover amazing places to stay in Germany</p>
         </div>
         <PropertyList :properties="properties" :isLoading="isLoading" />
       </div>
@@ -57,9 +59,7 @@ const handleSearch = async (query: string) => {
         <div class="text-slate-400 text-lg mb-4">
           Start your search to discover amazing properties
         </div>
-        <div class="text-slate-500 text-sm">
-          Enter your search terms above
-        </div>
+        <div class="text-slate-500 text-sm">Enter your search terms above</div>
       </div>
     </div>
   </div>
