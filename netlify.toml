@@ -1,0 +1,14 @@
+# Netlify configuration for MyBnB Vue 3 + Vite application
+
+# Build settings
+[build]
+  # Netlify will execute this command to create the production build
+  command = "npm run build"
+  # Directory to deploy (Vite outputs to `dist` by default)
+  publish = "dist"
+
+# Redirect all requests to index.html so that Vue Router history mode works correctly
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
