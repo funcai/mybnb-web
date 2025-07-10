@@ -49,7 +49,7 @@ const handleSearch = async (query: string) => {
           <h2 class="text-2xl font-semibold text-white mb-2">
             {{ isLoading ? 'Searching...' : `${properties.length} properties found` }}
           </h2>
-          <p class="text-slate-400">Discover amazing places to stay in Germany</p>
+          <p class="text-slate-400">Discover amazing places to stay</p>
         </div>
         <PropertyList :properties="properties" :isLoading="isLoading" />
       </div>
