@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Property } from '../types/property';
-import PropertyCard from './PropertyCard.vue';
+import PropertyCard from './PropertyCard.vue'
 
 interface PropertyListProps {
   properties: Property[];
@@ -11,9 +11,7 @@ withDefaults(defineProps<PropertyListProps>(), {
   isLoading: false
 });
 
-const handleCardClick = (property: Property) => {
-  window.open(property.url, '_blank');
-};
+
 </script>
 
 <template>
@@ -50,7 +48,6 @@ const handleCardClick = (property: Property) => {
       v-for="property in properties"
       :key="property.id"
       :property="property"
-      @click="handleCardClick(property)"
     />
   </div>
 </template>

@@ -6,20 +6,15 @@ interface PropertyCardProps {
   property: Property;
 }
 
-defineProps<PropertyCardProps>();
-const emit = defineEmits<{
-  click: [];
-}>();
-
-const handleClick = () => {
-  emit('click');
-};
+const props = defineProps<PropertyCardProps>();
 </script>
 
 <template>
-  <div 
-    @click="handleClick"
-    class="bg-slate-800 rounded-lg p-4 shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer hover:bg-slate-750 border border-slate-700 hover:border-slate-600"
+  <a
+    :href="props.property.url"
+    target="_blank"
+    rel="noopener noreferrer"
+    class="block bg-slate-800 rounded-lg p-4 shadow-lg hover:shadow-xl transition-all duration-200 hover:bg-slate-750 border border-slate-700 hover:border-slate-600"
   >
     <!-- Desktop layout -->
     <div class="hidden md:flex items-center justify-between">
@@ -107,5 +102,5 @@ const handleClick = () => {
         </div>
       </div>
     </div>
-  </div>
+  </a>
 </template>
