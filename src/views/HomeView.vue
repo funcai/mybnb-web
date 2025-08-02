@@ -1,18 +1,54 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onUnmounted } from 'vue'
 import SearchBar from '../components/SearchBar.vue'
 import PropertyList from '../components/PropertyList.vue'
 import type { Property } from '../types/property'
 import { searchProperties } from '../services/api'
+import LoadingAnimation from '../components/LoadingAnimation.vue'
 
 const properties = ref<Property[]>([])
 const isLoading = ref(false)
 const hasSearched = ref(false)
+const loadingText = ref('Starting your apartment search…')
+
+const loadingMessages = [
+  'Looking under beds for dust…',
+  'Fluffing the pillows…',
+  'Peeking behind curtains… just in case',
+  'Inspecting for creaky floorboards…',
+  'Preheating the towel rack…',
+  'Counting spoons in the cutlery drawer…',
+  'Defrosting the freezer compartment…',
+  'Checking the water pressure in the shower…',
+  'Wiping fingerprints off the fridge door…',
+]
+
+let loadingInterval: number | null = null
+
+const startLoadingTextAnimation = () => {
+  loadingText.value = 'Starting your apartment search…'
+
+  loadingInterval = setInterval(() => {
+    const randomIndex = Math.floor(Math.random() * loadingMessages.length)
+    loadingText.value = loadingMessages[randomIndex]
+  }, 5000)
+}
+
+const stopLoadingTextAnimation = () => {
+  if (loadingInterval) {
+    clearInterval(loadingInterval)
+    loadingInterval = null
+  }
+  loadingText.value = 'Discover amazing places to stay'
+}
 
 const handleSearch = async (query: string) => {
   isLoading.value = true
   hasSearched.value = true // Set this immediately so PropertyList renders
   properties.value = [] // Clear previous results to show skeleton
+
+  startLoadingTextAnimation()
+
   try {
     const results = await searchProperties(query)
     properties.value = results
@@ -20,8 +56,14 @@ const handleSearch = async (query: string) => {
     console.error('Search failed:', error)
   } finally {
     isLoading.value = false
+    stopLoadingTextAnimation()
   }
 }
+
+// Cleanup interval on component unmount
+onUnmounted(() => {
+  stopLoadingTextAnimation()
+})
 </script>
 
 <template>
@@ -45,13 +87,11 @@ const handleSearch = async (query: string) => {
 
       <!-- Results -->
       <div v-if="hasSearched" class="mt-8 max-w-4xl mx-auto">
-        <div class="mb-6">
-          <h2 class="text-2xl font-semibold text-white mb-2">
-            {{ isLoading ? 'Searching...' : `${properties.length} properties found` }}
-          </h2>
-          <p class="text-slate-400">Discover amazing places to stay</p>
-        </div>
-        <PropertyList :properties="properties" :isLoading="isLoading" />
+        <h2 class="text-2xl font-semibold text-center text-white mb-2">
+          {{ isLoading ? loadingText : `${properties.length} properties found` }}
+        </h2>
+        <LoadingAnimation v-if="isLoading" />
+        <PropertyList v-else :properties="properties" />
       </div>
 
       <!-- Welcome message when no search has been performed -->
