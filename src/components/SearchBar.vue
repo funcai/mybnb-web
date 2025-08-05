@@ -17,9 +17,9 @@ const emit = defineEmits<{
 const query = ref('')
 
 const examples = [
-  'Try: Apartment in Zürich with a comfortable office chair for < 80€ per day',
-  'Try: Apartment in New York with a coffee machine, king size bed and 2 bathrooms',
-  'Try: Apartment in San Francisco with a desk with at least 2 monitors that is close to the beach',
+  'Try: Apartment in Vienna with a walk in shower for < 1500€ per month',
+  'Try: Apartment in Augsburg with a dining table for at least 4 people for < 1700€ per month',
+  'Try: Apartment in Vienna with a high bed for < 1200€ per month',
 ]
 
 const exampleHint = ref('')
@@ -42,7 +42,8 @@ const handleSubmit = (e: Event) => {
           v-model="query"
           type="text"
           placeholder="What are you looking for?"
-          class="w-full pl-12 pr-4 py-4 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
+          style="padding-right: 152px"
+          class="w-full pl-12 py-4 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
         />
       </div>
       <button

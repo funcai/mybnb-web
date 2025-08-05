@@ -1,3 +1,11 @@
+export interface ScoreDetail {
+  question: string;
+  score: number;
+  description_matches: boolean;
+  vision_matches: boolean;
+  keyword: string;
+}
+
 export interface Property {
   id: string;
   listingId: string;
@@ -21,5 +29,8 @@ export interface Property {
     deposit: number;
     currency: string;
     furnished: boolean;
+    availableFrom?: string;
   };
+  overall_score?: number;
+  score_details?: ScoreDetail[];
 }

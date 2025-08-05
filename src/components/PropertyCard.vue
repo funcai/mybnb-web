@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { MapPin, Home, Bed } from 'lucide-vue-next';
-import type { Property } from '../types/property';
+import { MapPin, Home, Bed, Check, X } from 'lucide-vue-next'
+import type { Property } from '../types/property'
 
 interface PropertyCardProps {
-  property: Property;
+  property: Property
 }
 
-const props = defineProps<PropertyCardProps>();
+const props = defineProps<PropertyCardProps>()
 </script>
 
 <template>
@@ -24,11 +24,11 @@ const props = defineProps<PropertyCardProps>();
           <MapPin class="h-4 w-4 mr-1" />
           <span class="text-sm">{{ property.address.city }}, {{ property.address.country }}</span>
         </div>
-        
+
         <h3 class="text-white font-semibold text-lg mb-2">
           {{ property.address.street }}, {{ property.address.postalCode }}
         </h3>
-        
+
         <div class="flex items-center space-x-4 text-slate-400 text-sm">
           <div class="flex items-center">
             <Home class="h-4 w-4 mr-1" />
@@ -41,15 +41,36 @@ const props = defineProps<PropertyCardProps>();
           <div>
             <span>{{ property.facts.area_m2 }} m²</span>
           </div>
-          <div v-if="property.facts.furnished" class="inline-flex items-center px-2 py-1 bg-green-600 text-green-100 text-xs font-medium rounded-full">
-            Furnished
+          <!-- Score detail badges -->
+          <div
+            v-if="property.score_details && property.score_details.length > 0"
+            class="flex flex-wrap gap-2"
+          >
+            <template v-for="detail in property.score_details" :key="detail.keyword">
+              <div
+                v-if="detail.description_matches || detail.vision_matches"
+                class="inline-flex items-center px-2 py-1 bg-blue-600 text-blue-100 text-xs font-medium rounded-full"
+              >
+                <span class="font-semibold">{{ detail.keyword }}:</span>
+                <template v-if="detail.description_matches">
+                  <Check class="h-3 w-3 mx-1 text-green-300" />
+                  <span class="text-xs">Description</span>
+                </template>
+                <template v-if="detail.vision_matches">
+                  <Check class="h-3 w-3 mx-1 text-green-300" />
+                  <span class="text-xs">Images</span>
+                </template>
+              </div>
+            </template>
           </div>
         </div>
       </div>
 
       <!-- Right side - Price -->
       <div class="text-right ml-6">
-        <div class="text-2xl font-bold text-white">€{{ property.facts.rent_monthly.toLocaleString() }}</div>
+        <div class="text-2xl font-bold text-white">
+          €{{ property.facts.rent_monthly.toLocaleString() }}
+        </div>
         <div class="text-slate-400 text-sm">per month</div>
         <div class="text-slate-500 text-xs mt-1">
           Deposit: €{{ property.facts.deposit.toLocaleString() }}
@@ -64,12 +85,12 @@ const props = defineProps<PropertyCardProps>();
         <MapPin class="h-4 w-4 mr-1" />
         <span class="text-sm">{{ property.address.city }}, {{ property.address.country }}</span>
       </div>
-      
+
       <!-- Address -->
       <h3 class="text-white font-semibold text-lg mb-3">
         {{ property.address.street }}, {{ property.address.postalCode }}
       </h3>
-      
+
       <!-- Property details -->
       <div class="flex flex-wrap items-center gap-3 text-slate-400 text-sm mb-3">
         <div class="flex items-center">
@@ -85,15 +106,32 @@ const props = defineProps<PropertyCardProps>();
         </div>
       </div>
 
-      <!-- Furnished badge -->
-      <div v-if="property.facts.furnished" class="inline-flex items-center px-2 py-1 bg-green-600 text-green-100 text-xs font-medium rounded-full mb-3">
-        Furnished
+      <!-- Score detail badges -->
+      <div
+        v-if="property.score_details && property.score_details.length > 0"
+        class="flex flex-wrap gap-2 mb-3"
+      >
+        <div
+          v-for="detail in property.score_details"
+          :key="detail.keyword"
+          class="inline-flex items-center px-2 py-1 bg-blue-600 text-blue-100 text-xs font-medium rounded-full"
+        >
+          <span class="font-semibold">{{ detail.keyword }}:</span>
+          <Check v-if="detail.description_matches" class="h-3 w-3 mx-1 text-green-300" />
+          <X v-else class="h-3 w-3 mx-1 text-red-300" />
+          <span class="text-xs">Description</span>
+          <Check v-if="detail.vision_matches" class="h-3 w-3 mx-1 text-green-300" />
+          <X v-else class="h-3 w-3 mx-1 text-red-300" />
+          <span class="text-xs">Images</span>
+        </div>
       </div>
-      
+
       <!-- Price section -->
       <div class="flex items-center justify-between pt-2 border-t border-slate-700">
         <div>
-          <div class="text-2xl font-bold text-white">€{{ property.facts.rent_monthly.toLocaleString() }}</div>
+          <div class="text-2xl font-bold text-white">
+            €{{ property.facts.rent_monthly.toLocaleString() }}
+          </div>
           <div class="text-slate-400 text-sm">per month</div>
         </div>
         <div class="text-right">
