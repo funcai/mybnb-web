@@ -111,19 +111,20 @@ const props = defineProps<PropertyCardProps>()
         v-if="property.score_details && property.score_details.length > 0"
         class="flex flex-wrap gap-2 mb-3"
       >
-        <div
-          v-for="detail in property.score_details"
-          :key="detail.keyword"
-          class="inline-flex items-center px-2 py-1 bg-blue-600 text-blue-100 text-xs font-medium rounded-full"
-        >
-          <span class="font-semibold">{{ detail.keyword }}:</span>
-          <Check v-if="detail.description_matches" class="h-3 w-3 mx-1 text-green-300" />
-          <X v-else class="h-3 w-3 mx-1 text-red-300" />
-          <span class="text-xs">Description</span>
-          <Check v-if="detail.vision_matches" class="h-3 w-3 mx-1 text-green-300" />
-          <X v-else class="h-3 w-3 mx-1 text-red-300" />
-          <span class="text-xs">Images</span>
-        </div>
+        <template v-for="detail in property.score_details" :key="detail.keyword">
+          <div
+            v-if="detail.score > 0"
+            class="inline-flex items-center px-2 py-1 bg-blue-600 text-blue-100 text-xs font-medium rounded-full"
+          >
+            <span class="font-semibold">{{ detail.keyword }}:</span>
+            <Check v-if="detail.description_matches" class="h-3 w-3 mx-1 text-green-300" />
+            <X v-else class="h-3 w-3 mx-1 text-red-300" />
+            <span class="text-xs">Description</span>
+            <Check v-if="detail.vision_matches" class="h-3 w-3 mx-1 text-green-300" />
+            <X v-else class="h-3 w-3 mx-1 text-red-300" />
+            <span class="text-xs">Images</span>
+          </div>
+        </template>
       </div>
 
       <!-- Price section -->
