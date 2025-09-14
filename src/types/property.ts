@@ -1,36 +1,20 @@
-export interface ScoreDetail {
-  question: string;
-  score: number;
-  description_matches: boolean;
-  vision_matches: boolean;
-  keyword: string;
+// New types aligned with updated backend response
+export interface ApartmentAttribute {
+  key: string
+  value: string | number | boolean
 }
 
-export interface Property {
-  id: string;
-  listingId: string;
-  provider: string;
-  url: string;
-  location: {
-    type: string;
-    coordinates: [number, number];
-  };
-  address: {
-    street: string;
-    postalCode: string;
-    city: string;
-    country: string;
-  };
-  facts: {
-    area_m2: number;
-    rooms: number;
-    beds: number;
-    rent_monthly: number;
-    deposit: number;
-    currency: string;
-    furnished: boolean;
-    availableFrom?: string;
-  };
-  overall_score?: number;
-  score_details?: ScoreDetail[];
+export interface ApartmentImage {
+  id: string
+  url: string
+}
+
+export interface Apartment {
+  id: string
+  provider: string
+  providerId: string
+  sourceUrl: string
+  attributes: ApartmentAttribute[]
+  description: string
+  images: ApartmentImage[]
 }

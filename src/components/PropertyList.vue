@@ -1,27 +1,21 @@
 <script setup lang="ts">
-import type { Property } from '../types/property';
+import type { Apartment } from '../types/property'
 import PropertyCard from './PropertyCard.vue'
 
 interface PropertyListProps {
-  properties: Property[];
-  isLoading?: boolean;
+  apartments: Apartment[]
+  isLoading?: boolean
 }
 
 withDefaults(defineProps<PropertyListProps>(), {
-  isLoading: false
-});
-
-
+  isLoading: false,
+})
 </script>
 
 <template>
   <!-- Loading skeleton - always show when loading -->
   <div v-if="isLoading" class="space-y-4">
-    <div 
-      v-for="i in 6" 
-      :key="i" 
-      class="bg-slate-800 rounded-lg p-4 animate-pulse"
-    >
+    <div v-for="i in 6" :key="i" class="bg-slate-800 rounded-lg p-4 animate-pulse">
       <div class="flex items-center justify-between">
         <div class="flex-1">
           <div class="h-4 bg-slate-700 rounded mb-2 w-32"></div>
@@ -37,17 +31,13 @@ withDefaults(defineProps<PropertyListProps>(), {
   </div>
 
   <!-- No results message - only show when not loading and no properties -->
-  <div v-else-if="!isLoading && properties.length === 0" class="text-center py-12">
+  <div v-else-if="!isLoading && apartments.length === 0" class="text-center py-12">
     <div class="text-slate-400 text-lg">No properties found</div>
     <div class="text-slate-500 text-sm mt-2">Try a different search term</div>
   </div>
 
   <!-- Properties list - only show when not loading and have properties -->
-  <div v-else-if="!isLoading && properties.length > 0" class="space-y-4">
-    <PropertyCard
-      v-for="property in properties"
-      :key="property.id"
-      :property="property"
-    />
+  <div v-else-if="!isLoading && apartments.length > 0" class="space-y-4">
+    <PropertyCard v-for="apartment in apartments" :key="apartment.id" :apartment="apartment" />
   </div>
 </template>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import { Search } from 'lucide-vue-next'
 
 interface SearchBarProps {
@@ -48,8 +48,7 @@ const handleSubmit = (e: Event) => {
       </div>
       <button
         type="submit"
-        :disabled="isLoading"
-        class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-2 px-6 rounded-lg transition-all duration-200"
+        class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-2 px-6 rounded-lg transition-all duration-200"
       >
         {{ isLoading ? 'Searching...' : 'Search' }}
       </button>

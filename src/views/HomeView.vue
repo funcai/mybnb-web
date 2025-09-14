@@ -1,15 +1,17 @@
 <script setup lang="ts">
-import { ref, onUnmounted } from 'vue'
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import SearchBar from '../components/SearchBar.vue'
 import PropertyList from '../components/PropertyList.vue'
-import type { Property } from '../types/property'
-import { searchProperties } from '../services/api'
+import type { Apartment } from '../types/property'
+import { createSearchRequest } from '../services/api'
 import LoadingAnimation from '../components/LoadingAnimation.vue'
 
-const properties = ref<Property[]>([])
+const apartments = ref<Apartment[]>([])
 const isLoading = ref(false)
 const hasSearched = ref(false)
 const loadingText = ref('Starting your apartment search…')
+const router = useRouter()
 
 const loadingMessages = [
   'Looking under beds for dust…',
@@ -43,27 +45,26 @@ const stopLoadingTextAnimation = () => {
 }
 
 const handleSearch = async (query: string) => {
+  // Create a new request and redirect to the dedicated search page
   isLoading.value = true
-  hasSearched.value = true // Set this immediately so PropertyList renders
-  properties.value = [] // Clear previous results to show skeleton
-
+  hasSearched.value = true
+  apartments.value = []
   startLoadingTextAnimation()
-
   try {
-    const results = await searchProperties(query)
-    properties.value = results
+    const requestId = await createSearchRequest(query)
+    await router.push({ name: 'search', params: { requestId } })
   } catch (error) {
-    console.error('Search failed:', error)
+    console.error('Failed to create search request:', error)
   } finally {
     isLoading.value = false
     stopLoadingTextAnimation()
   }
 }
 
-// Cleanup interval on component unmount
-onUnmounted(() => {
-  stopLoadingTextAnimation()
-})
+// No special unmount handling needed beyond stopping the loading animation
+// (No SSE used on Home page anymore)
+
+// (helpers removed; streaming now happens in SearchView)
 </script>
 
 <template>
@@ -88,10 +89,11 @@ onUnmounted(() => {
       <!-- Results -->
       <div v-if="hasSearched" class="mt-8 max-w-4xl mx-auto">
         <h2 class="text-2xl font-semibold text-center text-white mb-2">
-          {{ isLoading ? loadingText : `${properties.length} properties found` }}
+          {{ isLoading ? loadingText : `${apartments.length} properties found` }}
         </h2>
         <LoadingAnimation v-if="isLoading" />
-        <PropertyList v-else :properties="properties" />
+        <!-- Show apartments as soon as we have any, even while streaming -->
+        <PropertyList v-if="apartments.length > 0" :apartments="apartments" />
       </div>
 
       <!-- Welcome message when no search has been performed -->
