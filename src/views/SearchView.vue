@@ -5,8 +5,9 @@ import SearchBar from '../components/SearchBar.vue'
 import PropertyList from '../components/PropertyList.vue'
 import LoadingAnimation from '../components/LoadingAnimation.vue'
 import type { Apartment } from '../types/property'
-import { createSearchRequest, streamRequestById } from '../services/api'
+import { createSearchRequest, openRequestEventSource } from '../services/api'
 import { normalizeUpdateToApartments, upsertById } from '../utils/apartments'
+import type { AcceptedEventPayload, SearchRequest } from '../types/request'
 
 const route = useRoute()
 const router = useRouter()
@@ -14,6 +15,9 @@ const router = useRouter()
 const apartments = ref<Apartment[]>([])
 const isLoading = ref(true)
 const loadingText = ref('Starting your apartment search…')
+// Store request metadata for later use
+const requestDoc = ref<SearchRequest | null>(null)
+const currentRequestId = ref<string | null>(null)
 
 const loadingMessages = [
   'Looking under beds for dust…',
@@ -28,7 +32,7 @@ const loadingMessages = [
 ]
 
 let loadingInterval: number | null = null
-let sseController: AbortController | null = null
+let ev: EventSource | null = null
 
 const startLoadingTextAnimation = () => {
   loadingText.value = 'Starting your apartment search…'
@@ -47,59 +51,55 @@ const stopLoadingTextAnimation = () => {
   loadingText.value = 'Discover amazing places to stay'
 }
 
-function wait(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
-
-async function startStreamingForRequestId(requestId: string) {
-  // Abort any previous stream loop
-  if (sseController) {
-    sseController.abort()
-    sseController = null
+function startStreamingForRequestId(requestId: string) {
+  // Close any existing connection
+  if (ev) {
+    try {
+      ev.close()
+    } catch {}
+    ev = null
   }
 
   // Initial state for a fresh request
   apartments.value = []
   isLoading.value = true
   startLoadingTextAnimation()
+  requestDoc.value = null
+  currentRequestId.value = requestId
 
-  const controller = new AbortController()
-  sseController = controller
-  let attempt = 0
+  // Open EventSource and attach listeners
+  ev = openRequestEventSource(requestId)
 
-  while (sseController === controller) {
+  ev.addEventListener('accepted', (e) => {
     try {
-      await streamRequestById(
-        requestId,
-        (data) => {
-          const newItems = normalizeUpdateToApartments(data)
-          if (newItems.length > 0) {
-            apartments.value = upsertById(apartments.value, newItems)
-            if (apartments.value.length > 0) {
-              isLoading.value = false
-              stopLoadingTextAnimation()
-            }
-          }
-        },
-        { signal: controller.signal },
-      )
-    } catch (error) {
-      // If we were aborted or navigated away, stop trying
-      if (sseController !== controller) break
-      console.error('SSE by requestId failed:', error)
-    } finally {
-      // If we were aborted or navigated away, exit loop
-      if (sseController !== controller) break
-      // If stream ended (server closed) but we're still on the page, stop loading state
-      isLoading.value = false
-      stopLoadingTextAnimation()
+      const payload = JSON.parse((e as MessageEvent).data) as AcceptedEventPayload
+      requestDoc.value = payload.request
+      currentRequestId.value = payload.requestId || requestId
+    } catch (err) {
+      console.warn('Failed to parse accepted event payload', err)
     }
+  })
 
-    // Reconnect with exponential backoff while still active
-    attempt += 1
-    const delayMs = Math.min(1000 * 2 ** Math.min(attempt, 4), 10000)
-    await wait(delayMs)
-  }
+  ev.addEventListener('update', (e) => {
+    try {
+      const enriched = JSON.parse((e as MessageEvent).data) as unknown
+      const newItems = normalizeUpdateToApartments(enriched)
+      if (newItems.length > 0) {
+        apartments.value = upsertById(apartments.value, newItems)
+        if (apartments.value.length > 0) {
+          isLoading.value = false
+          stopLoadingTextAnimation()
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to parse update event payload', err)
+    }
+  })
+
+  ev.addEventListener('error', (e) => {
+    console.error('EventSource error:', e)
+    // EventSource will attempt to reconnect automatically; keep loading state as-is
+  })
 }
 
 function getRequestIdFromRoute(): string | null {
@@ -123,9 +123,11 @@ watch(
 )
 
 onUnmounted(() => {
-  if (sseController) {
-    sseController.abort()
-    sseController = null
+  if (ev) {
+    try {
+      ev.close()
+    } catch {}
+    ev = null
   }
   stopLoadingTextAnimation()
 })
@@ -160,7 +162,11 @@ const handleSearch = async (query: string) => {
       </div>
 
       <!-- Search Bar -->
-      <SearchBar @search="handleSearch" :isLoading="isLoading" />
+      <SearchBar
+        @search="handleSearch"
+        :isLoading="isLoading"
+        :initialQuery="(requestDoc && requestDoc.userQuery) || ''"
+      />
 
       <!-- Results -->
       <div class="mt-8 max-w-4xl mx-auto">
@@ -169,7 +175,7 @@ const handleSearch = async (query: string) => {
         </h2>
         <LoadingAnimation v-if="isLoading" />
         <!-- Show apartments as soon as we have any, even while streaming -->
-        <PropertyList v-if="apartments.length > 0" :apartments="apartments" />
+        <PropertyList v-if="apartments.length > 0" :apartments="apartments" :request="requestDoc" />
       </div>
     </div>
   </div>

@@ -1,14 +1,23 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { Apartment } from '../types/property'
+import type { SearchRequest } from '../types/request'
 import PropertyCard from './PropertyCard.vue'
 
 interface PropertyListProps {
   apartments: Apartment[]
   isLoading?: boolean
+  request?: SearchRequest | null
 }
 
-withDefaults(defineProps<PropertyListProps>(), {
+const props = withDefaults(defineProps<PropertyListProps>(), {
   isLoading: false,
+})
+
+const sortedApartments = computed(() => {
+  const arr = [...props.apartments]
+  arr.sort((a, b) => (b.overallScore ?? 0) - (a.overallScore ?? 0))
+  return arr
 })
 </script>
 
@@ -38,6 +47,11 @@ withDefaults(defineProps<PropertyListProps>(), {
 
   <!-- Properties list - only show when not loading and have properties -->
   <div v-else-if="!isLoading && apartments.length > 0" class="space-y-4">
-    <PropertyCard v-for="apartment in apartments" :key="apartment.id" :apartment="apartment" />
+    <PropertyCard
+      v-for="apartment in sortedApartments"
+      :key="apartment.id"
+      :apartment="apartment"
+      :request="request"
+    />
   </div>
 </template>

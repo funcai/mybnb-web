@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { Search } from 'lucide-vue-next'
 
 interface SearchBarProps {
   isLoading?: boolean
+  initialQuery?: string
 }
 
-withDefaults(defineProps<SearchBarProps>(), {
+const props = withDefaults(defineProps<SearchBarProps>(), {
   isLoading: false,
+  initialQuery: '',
 })
 
 const emit = defineEmits<{
@@ -15,6 +17,18 @@ const emit = defineEmits<{
 }>()
 
 const query = ref('')
+
+// Sync incoming initial query from parent (e.g., request.userQuery)
+watch(
+  () => props.initialQuery,
+  (val) => {
+    if (typeof val === 'string' && (query.value === '' || query.value == null)) {
+      query.value = val
+      if (val) exampleHint.value = ''
+    }
+  },
+  { immediate: true },
+)
 
 const examples = [
   'Try: Apartment in Vienna with a walk in shower for < 1500€ per month',
