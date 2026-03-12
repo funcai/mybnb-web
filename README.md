@@ -14,8 +14,23 @@ npm run dev
 
 ## Running locally
 
-If you want to use a locally running server, create a .env file in the root directory and add the following line:
+The frontend now talks to `mybnb-agent`, not RunPod directly.
 
-VITE_USE_LOCAL_API=true
+Production builds are pinned to:
 
-The [local server](https://github.com/funcai/mybnb-worker) should be running on port 8000.
+```sh
+VITE_AGENT_BASE_URL=https://api.42eyes.com/api
+```
+
+If the agent is served from the same origin, no extra frontend environment is required.
+
+If the agent is running on a different origin during local development, create a `.env` file in the project root and set:
+
+```sh
+VITE_AGENT_BASE_URL=http://localhost:8080/api
+```
+
+On startup the app calls `POST /api/boot`, and searches use:
+
+- `POST /api/requests`
+- `GET /api/requests/{requestId}` via SSE

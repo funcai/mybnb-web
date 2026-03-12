@@ -7,6 +7,9 @@
   # Directory to deploy (Vite outputs to `dist` by default)
   publish = "dist"
 
+  [build.environment]
+    NODE_VERSION = "22"
+
 # Redirect all requests to index.html so that Vue Router history mode works correctly
 [[redirects]]
   from = "/*"

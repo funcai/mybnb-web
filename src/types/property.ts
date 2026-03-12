@@ -1,36 +1,21 @@
-export interface ScoreDetail {
-  question: string;
-  score: number;
-  description_matches: boolean;
-  vision_matches: boolean;
-  keyword: string;
+export interface PropertyAttribute {
+  key: string
+  label: string
+  value: string
+}
+
+export interface PropertyQuestionScore {
+  questionId: string
+  question: string
+  score: number
 }
 
 export interface Property {
-  id: string;
-  listingId: string;
-  provider: string;
-  url: string;
-  location: {
-    type: string;
-    coordinates: [number, number];
-  };
-  address: {
-    street: string;
-    postalCode: string;
-    city: string;
-    country: string;
-  };
-  facts: {
-    area_m2: number;
-    rooms: number;
-    beds: number;
-    rent_monthly: number;
-    deposit: number;
-    currency: string;
-    furnished: boolean;
-    availableFrom?: string;
-  };
-  overall_score?: number;
-  score_details?: ScoreDetail[];
+  id: string
+  provider: string
+  sourceUrl: string
+  title: string
+  description: string
+  attributes: PropertyAttribute[]
+  questionScores: PropertyQuestionScore[]
 }

@@ -1,112 +1,244 @@
-import type { Property } from '../types/property'
+import type { Property, PropertyAttribute, PropertyQuestionScore } from '../types/property'
 
 type EnvLike = Record<string, string | undefined>
 
-type ApartmentResponse = {
-  apartments?: unknown
-  [key: string]: unknown
+type AgentQuestion = {
+  id?: string
+  question?: string
 }
 
-const LOCAL_API_URL = 'http://localhost:8000/generate'
-
-export const useLocalApi = (env: EnvLike = import.meta.env): boolean => {
-  return env.VITE_USE_LOCAL_API === 'true'
+type AgentRequest = {
+  id?: string
+  status?: string
+  nonFilterableQuestions?: AgentQuestion[]
 }
 
-export const resolveRunpodBaseUrl = (env: EnvLike = import.meta.env): string => {
-  const explicitBaseUrl = env.VITE_RUNPOD_BASE_URL?.trim()
-  if (explicitBaseUrl) {
-    return explicitBaseUrl.replace(/\/+$/, '')
-  }
-
-  const endpointId = env.VITE_RUNPOD_ENDPOINT_ID?.trim()
-  if (!endpointId) {
-    throw new Error('RunPod endpoint configuration missing')
-  }
-
-  return `https://${endpointId}.api.runpod.ai`
+type AcceptedPayload = {
+  requestId: string
+  request?: AgentRequest
 }
 
-const getAuthHeaders = (env: EnvLike = import.meta.env): HeadersInit => {
-  const apiKey = env.VITE_RUNPOD_API_KEY?.trim()
-  if (!apiKey) {
-    throw new Error('RunPod API key missing')
-  }
+type RequestPayload = AcceptedPayload
 
-  return {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${apiKey}`,
-  }
+type AgentAttribute = {
+  key?: string
+  value?: unknown
 }
 
-const parseApartments = (payload: ApartmentResponse | unknown): Property[] => {
-  const apartments =
-    typeof payload === 'object' && payload !== null && 'apartments' in payload
-      ? (payload as ApartmentResponse).apartments
-      : payload
+type AgentApartment = {
+  id?: string
+  provider?: string
+  sourceUrl?: string
+  ogTitle?: string
+  ogDescription?: string
+  description?: string
+  attributes?: AgentAttribute[]
+}
 
-  if (Array.isArray(apartments)) {
-    return apartments as Property[]
+type AgentQuestionResult = {
+  nonFilterableQuestionId?: string
+  score?: number
+}
+
+type AgentMatchingApartment = {
+  apartmentId?: string
+  apartment?: AgentApartment
+  nonFilterableQuestionResults?: AgentQuestionResult[]
+}
+
+type EventSourceLike = {
+  addEventListener: (type: string, listener: (event: MessageEvent<string>) => void) => void
+  close: () => void
+  onerror: ((event: Event) => void) | null
+}
+
+type EventSourceFactory = (url: string) => EventSourceLike
+
+export type SearchHandlers = {
+  onAccepted?: (payload: AcceptedPayload) => void
+  onRequest?: (payload: RequestPayload) => void
+  onUpdate?: (properties: Property[]) => void
+  onError?: (error: Error) => void
+}
+
+type StartSearchOptions = {
+  env?: EnvLike
+  eventSourceFactory?: EventSourceFactory
+}
+
+const defaultEventSourceFactory: EventSourceFactory = (url) => new EventSource(url)
+
+export const resolveAgentBaseUrl = (env: EnvLike = import.meta.env): string => {
+  const baseUrl = env.VITE_AGENT_BASE_URL?.trim()
+  if (baseUrl) {
+    return baseUrl.replace(/\/+$/, '')
   }
+  return '/api'
+}
 
-  if (typeof apartments === 'string') {
-    const parsed = JSON.parse(apartments)
-    if (Array.isArray(parsed)) {
-      return parsed as Property[]
+const buildQuestionMap = (request?: AgentRequest): Map<string, string> => {
+  const questionMap = new Map<string, string>()
+  for (const question of request?.nonFilterableQuestions ?? []) {
+    const id = question.id?.trim()
+    const text = question.question?.trim()
+    if (id && text) {
+      questionMap.set(id, text)
     }
   }
-
-  throw new Error('Unexpected apartment response format')
+  return questionMap
 }
 
-const callApi = async (url: string, query: string, headers: HeadersInit): Promise<Property[]> => {
+const normalizeValue = (value: unknown): string => {
+  if (typeof value === 'string') {
+    return value
+  }
+  if (typeof value === 'number') {
+    return Number.isInteger(value) ? String(value) : value.toFixed(2)
+  }
+  if (typeof value === 'boolean') {
+    return value ? 'Yes' : 'No'
+  }
+  if (Array.isArray(value)) {
+    return value.map((entry) => normalizeValue(entry)).join(', ')
+  }
+  if (value && typeof value === 'object') {
+    return JSON.stringify(value)
+  }
+  return 'Unknown'
+}
+
+const formatAttributeLabel = (key: string): string =>
+  key
+    .split(/[_-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+
+const mapAttribute = (attribute: AgentAttribute): PropertyAttribute | null => {
+  const key = attribute.key?.trim()
+  if (!key) {
+    return null
+  }
+  return {
+    key,
+    label: formatAttributeLabel(key),
+    value: normalizeValue(attribute.value),
+  }
+}
+
+const mapQuestionScore = (
+  result: AgentQuestionResult,
+  questionMap: Map<string, string>,
+): PropertyQuestionScore | null => {
+  const questionId = result.nonFilterableQuestionId?.trim()
+  if (!questionId) {
+    return null
+  }
+  return {
+    questionId,
+    question: questionMap.get(questionId) ?? questionId,
+    score: typeof result.score === 'number' ? result.score : 0,
+  }
+}
+
+export const mapMatchingApartmentsToProperties = (
+  apartments: AgentMatchingApartment[],
+  questionMap: Map<string, string>,
+): Property[] =>
+  apartments
+    .map((entry) => {
+      const apartment = entry.apartment
+      if (!apartment) {
+        return null
+      }
+      const id = apartment.id?.trim() || entry.apartmentId?.trim()
+      const sourceUrl = apartment.sourceUrl?.trim()
+      if (!id || !sourceUrl) {
+        return null
+      }
+      return {
+        id,
+        provider: apartment.provider?.trim() || 'unknown',
+        sourceUrl,
+        title: apartment.ogTitle?.trim() || sourceUrl,
+        description: apartment.ogDescription?.trim() || apartment.description?.trim() || '',
+        attributes: (apartment.attributes ?? [])
+          .map((attribute) => mapAttribute(attribute))
+          .filter((attribute): attribute is PropertyAttribute => attribute !== null),
+        questionScores: (entry.nonFilterableQuestionResults ?? [])
+          .map((result) => mapQuestionScore(result, questionMap))
+          .filter((result): result is PropertyQuestionScore => result !== null)
+          .sort((left, right) => right.score - left.score),
+      }
+    })
+    .filter((property): property is Property => property !== null)
+
+const parseJson = <T>(raw: string): T => JSON.parse(raw) as T
+
+const postJson = async <T>(url: string, body: unknown): Promise<T> => {
   const response = await fetch(url, {
     method: 'POST',
-    headers,
-    body: JSON.stringify({ query }),
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
   })
 
   if (!response.ok) {
     throw new Error(`API request failed: ${response.status} ${response.statusText}`)
   }
 
-  return parseApartments(await response.json())
-}
-
-const pingApi = async (url: string, headers: HeadersInit): Promise<void> => {
-  const response = await fetch(url, {
-    headers,
-  })
-
-  if (!response.ok) {
-    throw new Error(`API ping failed: ${response.status} ${response.statusText}`)
-  }
+  return (await response.json()) as T
 }
 
 export const bootBackend = async (env: EnvLike = import.meta.env): Promise<void> => {
-  if (useLocalApi(env)) {
-    console.log('Using local API - skipping remote prewarm')
-    return
-  }
-
   try {
-    await pingApi(`${resolveRunpodBaseUrl(env)}/ping`, getAuthHeaders(env))
-  } catch (err) {
-    console.error('Failed to ping RunPod backend:', err)
+    await fetch(`${resolveAgentBaseUrl(env)}/boot`, {
+      method: 'POST',
+    })
+  } catch (error) {
+    console.error('Failed to boot backend:', error)
   }
 }
 
-export const searchProperties = async (
-  query: string,
-  env: EnvLike = import.meta.env,
-): Promise<Property[]> => {
-  if (useLocalApi(env)) {
-    console.log('Using local API for search')
-    return callApi(LOCAL_API_URL, query, {
-      'Content-Type': 'application/json',
-    })
+export const startSearch = async (
+  searchQuery: string,
+  handlers: SearchHandlers,
+  options: StartSearchOptions = {},
+): Promise<() => void> => {
+  const env = options.env ?? import.meta.env
+  const eventSourceFactory = options.eventSourceFactory ?? defaultEventSourceFactory
+  const baseUrl = resolveAgentBaseUrl(env)
+  const { requestId } = await postJson<{ requestId: string }>(`${baseUrl}/requests`, {
+    searchQuery,
+  })
+  let questionMap = new Map<string, string>()
+
+  const source = eventSourceFactory(`${baseUrl}/requests/${encodeURIComponent(requestId)}`)
+  const cleanup = () => {
+    source.close()
   }
 
-  console.log('Using RunPod load balancer API for search')
-  return callApi(`${resolveRunpodBaseUrl(env)}/generate`, query, getAuthHeaders(env))
+  source.addEventListener('accepted', (event) => {
+    const payload = parseJson<AcceptedPayload>(event.data)
+    questionMap = buildQuestionMap(payload.request)
+    handlers.onAccepted?.(payload)
+  })
+
+  source.addEventListener('request', (event) => {
+    const payload = parseJson<RequestPayload>(event.data)
+    questionMap = buildQuestionMap(payload.request)
+    handlers.onRequest?.(payload)
+  })
+
+  source.addEventListener('update', (event) => {
+    const payload = parseJson<AgentMatchingApartment[]>(event.data)
+    handlers.onUpdate?.(mapMatchingApartmentsToProperties(payload, questionMap))
+  })
+
+  source.onerror = () => {
+    handlers.onError?.(new Error(`SSE connection failed for request ${requestId}`))
+  }
+
+  return cleanup
 }
