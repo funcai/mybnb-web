@@ -3,6 +3,8 @@ import { onMounted, onUnmounted, ref, watch } from 'vue'
 import maplibregl, { Map as MapLibreMap, Marker } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
+import { markerBounds, markerViewportSignature } from './mapViewport'
+
 export type MapMarker = {
   id: string
   lng: number
@@ -33,6 +35,9 @@ const emit = defineEmits<{
 const container = ref<HTMLDivElement | null>(null)
 let map: MapLibreMap | null = null
 let mapReady = false
+let userControlledViewport = false
+let autoFittingViewport = false
+let lastAutoFitSignature = ''
 let resizeObserver: ResizeObserver | null = null
 const markerInstances = new Map<string, { marker: Marker; el: HTMLElement }>()
 
@@ -56,6 +61,10 @@ const buildMarkerElement = (marker: MapMarker): HTMLElement => {
 
 const syncMarkers = () => {
   if (!map || !mapReady) return
+  if (props.markers.length === 0) {
+    userControlledViewport = false
+    lastAutoFitSignature = ''
+  }
   const incomingIds = new Set(props.markers.map((m) => m.id))
 
   for (const [id, entry] of markerInstances) {
@@ -79,12 +88,45 @@ const syncMarkers = () => {
   }
 
   applyHighlight()
+  fitToMarkers()
 }
 
 const applyHighlight = () => {
   for (const [id, entry] of markerInstances) {
     entry.el.classList.toggle('is-highlighted', id === props.highlightedId)
   }
+}
+
+const markUserControlledViewport = () => {
+  userControlledViewport = true
+}
+
+const markUserZoomViewport = () => {
+  if (!autoFittingViewport) {
+    userControlledViewport = true
+  }
+}
+
+const fitToMarkers = () => {
+  if (!map || !mapReady || userControlledViewport || props.markers.length === 0) return
+
+  const signature = markerViewportSignature(props.markers)
+  if (signature === lastAutoFitSignature) return
+
+  const bounds = markerBounds(props.markers)
+  if (!bounds) return
+
+  lastAutoFitSignature = signature
+  autoFittingViewport = true
+  map.once('moveend', () => {
+    autoFittingViewport = false
+  })
+  map.fitBounds(bounds, {
+    padding: 72,
+    maxZoom: 14,
+    duration: 650,
+    essential: true,
+  })
 }
 
 onMounted(() => {
@@ -98,6 +140,10 @@ onMounted(() => {
     attributionControl: { compact: true },
   })
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right')
+  map.on('dragstart', markUserControlledViewport)
+  map.on('zoomstart', markUserZoomViewport)
+  map.on('rotatestart', markUserControlledViewport)
+  map.on('pitchstart', markUserControlledViewport)
   map.on('load', () => {
     mapReady = true
     syncMarkers()
@@ -116,7 +162,14 @@ onMounted(() => {
 watch(
   () => [props.center?.[0], props.center?.[1], props.zoom] as const,
   ([lng, lat, zoom]) => {
-    if (!map || lng === undefined || lat === undefined) return
+    if (
+      !map ||
+      userControlledViewport ||
+      props.markers.length > 0 ||
+      lng === undefined ||
+      lat === undefined
+    )
+      return
     map.flyTo({ center: [lng, lat], zoom: zoom ?? props.zoom, essential: true })
   },
 )

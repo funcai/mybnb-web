@@ -10,6 +10,11 @@ export interface PropertyQuestionScore {
   score: number
 }
 
+export interface PropertyCoordinates {
+  lat: number
+  lng: number
+}
+
 export interface Property {
   id: string
   provider: string
@@ -18,4 +23,5 @@ export interface Property {
   description: string
   attributes: PropertyAttribute[]
   questionScores: PropertyQuestionScore[]
+  coordinates?: PropertyCoordinates
 }

@@ -9,6 +9,7 @@ const sampleProperties: Property[] = [
     title: 'Sunlit Altbau Loft near Naschmarkt',
     description:
       'A meticulously restored Viennese Altbau apartment with stucco ceilings, herringbone parquet, and floor-to-ceiling windows overlooking a quiet courtyard.',
+    coordinates: { lat: 48.1992, lng: 16.3645 },
     attributes: [
       { key: 'city', label: 'City', value: 'Vienna' },
       { key: 'price', label: 'Monthly rent', value: '€1,420' },
@@ -29,6 +30,7 @@ const sampleProperties: Property[] = [
     title: 'Refined Suite with Generous Dining Room',
     description:
       'Designer furnishings, a solid oak dining table seating six, and a private balcony with views over Augsburg’s historic rooftops.',
+    coordinates: { lat: 48.3697, lng: 10.8988 },
     attributes: [
       { key: 'city', label: 'City', value: 'Augsburg' },
       { key: 'price', label: 'Monthly rent', value: '€1,680' },
@@ -47,6 +49,7 @@ const sampleProperties: Property[] = [
     sourceUrl: 'https://example.com/listings/vienna-high-bed-studio',
     title: 'Minimalist Studio with High Platform Bed',
     description: '',
+    coordinates: { lat: 48.2121, lng: 16.3764 },
     attributes: [
       { key: 'city', label: 'City', value: 'Vienna' },
       { key: 'price', label: 'Monthly rent', value: '€1,150' },

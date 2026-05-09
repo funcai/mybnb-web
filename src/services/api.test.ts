@@ -81,6 +81,12 @@ describe('api service', () => {
             sourceUrl: 'https://example.com/apartments/1',
             ogTitle: 'Bright studio',
             description: 'Original description',
+            coordinates: {
+              lat: 52.5101,
+              lng: 13.3989,
+              source: 'explicit_html',
+              accuracy: 'approximate',
+            },
             attributes: [
               { key: 'number_rooms', value: 2 },
               { key: 'pets_allowed', value: true },
@@ -105,6 +111,10 @@ describe('api service', () => {
         sourceUrl: 'https://example.com/apartments/1',
         title: 'Bright studio',
         description: 'Original description',
+        coordinates: {
+          lat: 52.5101,
+          lng: 13.3989,
+        },
         attributes: [
           { key: 'number_rooms', label: 'Number Rooms', value: '2' },
           { key: 'pets_allowed', label: 'Pets Allowed', value: 'Yes' },
@@ -123,6 +133,31 @@ describe('api service', () => {
         ],
       },
     ])
+  })
+
+  it('drops invalid agent coordinates while keeping the property', () => {
+    const properties = mapMatchingApartmentsToProperties(
+      [
+        {
+          apartmentId: 'apt-1',
+          apartment: {
+            id: 'apt-1',
+            provider: 'booking',
+            sourceUrl: 'https://example.com/apartments/1',
+            coordinates: {
+              lat: 120,
+              lng: 13.3989,
+              source: 'explicit_html',
+              accuracy: 'property',
+            },
+          },
+        },
+      ],
+      new Map(),
+    )
+
+    expect(properties[0]).toEqual(expect.objectContaining({ id: 'apt-1' }))
+    expect(properties[0]).not.toHaveProperty('coordinates')
   })
 
   it('posts a search request, opens the sse stream, and closes it on cleanup', async () => {

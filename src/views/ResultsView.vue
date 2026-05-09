@@ -89,37 +89,38 @@ const cityHint = computed(() => {
   return null
 })
 
-const mapCenter = computed<[number, number]>(() =>
-  cityHint.value ? cityHint.value.center : [10.4515, 51.1657],
+const propertyCoordinates = computed(() =>
+  properties.value.filter((property) => property.coordinates !== undefined),
 )
-const mapZoom = computed(() => (cityHint.value ? 11 : 4.5))
 
-// Deterministic hash so the same property always lands at the same dummy spot.
-const hashString = (input: string): number => {
-  let h = 2166136261
-  for (let i = 0; i < input.length; i++) {
-    h ^= input.charCodeAt(i)
-    h = Math.imul(h, 16777619)
+const mapCenter = computed<[number, number]>(() => {
+  if (cityHint.value) return cityHint.value.center
+  if (propertyCoordinates.value.length > 0) {
+    const totals = propertyCoordinates.value.reduce(
+      (acc, property) => {
+        acc.lng += property.coordinates?.lng ?? 0
+        acc.lat += property.coordinates?.lat ?? 0
+        return acc
+      },
+      { lng: 0, lat: 0 },
+    )
+    return [
+      totals.lng / propertyCoordinates.value.length,
+      totals.lat / propertyCoordinates.value.length,
+    ]
   }
-  return h >>> 0
-}
-
-// TODO: replace with real coordinates from the backend.
-const markers = computed<MapMarker[]>(() => {
-  const [centerLng, centerLat] = mapCenter.value
-  const spread = cityHint.value ? 0.04 : 1.2 // ~4km in city, country-wide otherwise
-  return properties.value.map((p) => {
-    const h = hashString(p.id)
-    const dx = ((h & 0xffff) / 0xffff - 0.5) * 2 * spread
-    const dy = (((h >>> 16) & 0xffff) / 0xffff - 0.5) * 2 * spread
-    return {
-      id: p.id,
-      lng: centerLng + dx,
-      lat: centerLat + dy,
-      label: p.title,
-    }
-  })
+  return [10.4515, 51.1657]
 })
+const mapZoom = computed(() => (cityHint.value || propertyCoordinates.value.length > 0 ? 11 : 4.5))
+
+const markers = computed<MapMarker[]>(() =>
+  propertyCoordinates.value.map((property) => ({
+    id: property.id,
+    lng: property.coordinates?.lng ?? 0,
+    lat: property.coordinates?.lat ?? 0,
+    label: property.title,
+  })),
+)
 
 const hoveredId = ref<string | null>(null)
 const setHovered = (id: string | null) => {
@@ -164,7 +165,7 @@ const onMarkerSelect = (id: string) => {
         >
           myBnB
         </button>
-        <span class="hidden sm:inline">Curated Stays · Short &amp; Long Term</span>
+        <span class="hidden sm:inline">Find the exact apartment you're looking for</span>
         <span>Worldwide</span>
       </div>
     </header>

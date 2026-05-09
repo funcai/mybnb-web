@@ -1,17 +1,13 @@
 import type { Property, PropertyAttribute, PropertyQuestionScore } from '../types/property'
+import type {
+  AgentApartment,
+  AgentAttribute,
+  AgentMatchingApartment,
+  AgentQuestionResult,
+  AgentRequest,
+} from '../types/agent'
 
 type EnvLike = Record<string, string | undefined>
-
-type AgentQuestion = {
-  id?: string
-  question?: string
-}
-
-type AgentRequest = {
-  id?: string
-  status?: string
-  nonFilterableQuestions?: AgentQuestion[]
-}
 
 type AcceptedPayload = {
   requestId: string
@@ -19,32 +15,6 @@ type AcceptedPayload = {
 }
 
 type RequestPayload = AcceptedPayload
-
-type AgentAttribute = {
-  key?: string
-  value?: unknown
-}
-
-type AgentApartment = {
-  id?: string
-  provider?: string
-  sourceUrl?: string
-  ogTitle?: string
-  ogDescription?: string
-  description?: string
-  attributes?: AgentAttribute[]
-}
-
-type AgentQuestionResult = {
-  nonFilterableQuestionId?: string
-  score?: number
-}
-
-type AgentMatchingApartment = {
-  apartmentId?: string
-  apartment?: AgentApartment
-  nonFilterableQuestionResults?: AgentQuestionResult[]
-}
 
 type EventSourceLike = {
   addEventListener: (type: string, listener: (event: MessageEvent<string>) => void) => void
@@ -141,6 +111,25 @@ const mapQuestionScore = (
   }
 }
 
+const mapCoordinates = (apartment: AgentApartment): Property['coordinates'] => {
+  const coordinates = apartment.coordinates
+  if (!coordinates || typeof coordinates.lat !== 'number' || typeof coordinates.lng !== 'number') {
+    return undefined
+  }
+  if (
+    coordinates.lat < -90 ||
+    coordinates.lat > 90 ||
+    coordinates.lng < -180 ||
+    coordinates.lng > 180
+  ) {
+    return undefined
+  }
+  return {
+    lat: coordinates.lat,
+    lng: coordinates.lng,
+  }
+}
+
 export const mapMatchingApartmentsToProperties = (
   apartments: AgentMatchingApartment[],
   questionMap: Map<string, string>,
@@ -156,7 +145,7 @@ export const mapMatchingApartmentsToProperties = (
       if (!id || !sourceUrl) {
         return null
       }
-      return {
+      const property: Property = {
         id,
         provider: apartment.provider?.trim() || 'unknown',
         sourceUrl,
@@ -170,6 +159,11 @@ export const mapMatchingApartmentsToProperties = (
           .filter((result): result is PropertyQuestionScore => result !== null)
           .sort((left, right) => right.score - left.score),
       }
+      const coordinates = mapCoordinates(apartment)
+      if (coordinates) {
+        property.coordinates = coordinates
+      }
+      return property
     })
     .filter((property): property is Property => property !== null)
 
