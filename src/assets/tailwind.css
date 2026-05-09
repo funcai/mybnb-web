@@ -1,3 +1,29 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    --ink: #1c1a17;
+    --ink-soft: #4a4640;
+    --muted: #8a8278;
+    --line: #e6e0d6;
+    --paper: #f7f3ec;
+    --paper-2: #efe9de;
+    --accent: #8b6f47;
+    --accent-dark: #6f5836;
+  }
+
+  html,
+  body {
+    background-color: var(--paper);
+    color: var(--ink);
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    font-feature-settings: 'ss01', 'cv11';
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .font-serif {
+    font-family: 'Cormorant Garamond', 'Times New Roman', serif;
+  }
+}

@@ -166,12 +166,12 @@ onUnmounted(() => {
 }
 
 .card {
-  border-radius: 12px;
+  border-radius: 2px;
   aspect-ratio: 4/3;
   position: relative;
   opacity: 0;
   transform: translateY(-20px);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e6e0d6;
   overflow: hidden;
   transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -189,7 +189,7 @@ onUnmounted(() => {
 .card-content {
   width: 100%;
   height: 100%;
-  background: #d5d5d536;
+  background: #efe9de;
   position: relative;
 }
 
