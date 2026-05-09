@@ -48,13 +48,12 @@ const handleSearch = (query: string) => {
               class="font-serif text-[2.75rem] font-medium leading-[0.98] tracking-tight text-[#1c1a17] sm:text-7xl xl:text-[5.75rem]"
             >
               Find an apartment
-              <span class="block italic text-[#4a4640]">that feels like yours.</span>
+              <span class="block italic text-[#4a4640]">exactly like you want it.</span>
             </h1>
             <p
               class="mt-6 max-w-lg font-serif text-base italic leading-relaxed text-[#4a4640] sm:mt-8 sm:text-xl"
             >
-              Curated furnished homes for short-term and long-term stays — judged image-by-image by
-              our own vision-language engine, FlashJudge.
+              Furnished homes for short-term stays that match your requirements exactly.
             </p>
 
             <div class="mt-8 sm:mt-10">
