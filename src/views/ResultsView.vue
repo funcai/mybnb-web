@@ -217,10 +217,10 @@ const onMarkerSelect = (id: string) => {
            into a fixed full-screen overlay. -->
       <section
         :class="[
-          'relative flex-1',
+          'flex-1',
           showMobileMap
-            ? 'fixed inset-0 z-40 bg-[#f7f3ec] lg:static lg:inset-auto lg:z-auto'
-            : 'hidden lg:block lg:min-h-0',
+            ? 'fixed inset-x-0 bottom-0 top-[40dvh] z-40 bg-[#f7f3ec] shadow-[0_-12px_32px_rgba(28,26,23,0.18)] lg:relative lg:inset-auto lg:top-auto lg:z-auto lg:shadow-none'
+            : 'relative hidden lg:block lg:min-h-0',
         ]"
       >
         <MapView
