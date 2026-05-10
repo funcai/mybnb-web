@@ -21,6 +21,7 @@ export interface Property {
   sourceUrl: string
   title: string
   description: string
+  imageUrl?: string
   attributes: PropertyAttribute[]
   questionScores: PropertyQuestionScore[]
   coordinates?: PropertyCoordinates

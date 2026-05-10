@@ -6,7 +6,14 @@ export interface AgentQuestion {
 export interface AgentRequest {
   id?: string
   status?: string
+  foundApartments?: number
   nonFilterableQuestions?: AgentQuestion[]
+}
+
+export interface AgentRequestState {
+  foundApartments?: number
+  returnedApartmentsToFrontend?: number
+  requestedApartmentsForInvestigation?: number
 }
 
 export interface AgentAttribute {
@@ -27,6 +34,8 @@ export interface AgentApartment {
   sourceUrl?: string
   ogTitle?: string
   ogDescription?: string
+  ogImage?: string
+  images?: Array<{ url?: string }>
   description?: string
   attributes?: AgentAttribute[]
   coordinates?: AgentCoordinates | null

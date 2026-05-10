@@ -1,11 +1,16 @@
 import { ref, type Ref } from 'vue'
 
 import type { Property } from '../types/property'
-import type { SearchHandlers } from '../services/api'
-import { startSearch as defaultStartSearch } from '../services/api'
+import type { SearchHandlers, SearchProgress } from '../services/api'
+import { normalizeSearchProgress, startSearch as defaultStartSearch } from '../services/api'
 
 type RequestState = {
   status?: string
+}
+
+type RequestPayload = {
+  request?: RequestState
+  state?: SearchProgress
 }
 
 type StartSearchFn = (searchQuery: string, handlers: SearchHandlers) => Promise<() => void>
@@ -15,6 +20,7 @@ type HomeSearchController = {
   isLoading: Ref<boolean>
   hasSearched: Ref<boolean>
   loadingText: Ref<string>
+  searchProgress: Ref<SearchProgress>
   handleSearch: (query: string) => Promise<void>
   dispose: () => void
 }
@@ -40,6 +46,7 @@ export const createHomeSearchController = (
   const isLoading = ref(false)
   const hasSearched = ref(false)
   const loadingText = ref('Starting your apartment search...')
+  const searchProgress = ref<SearchProgress>(normalizeSearchProgress())
 
   let loadingInterval: ReturnType<typeof setInterval> | null = null
   let activeCleanup: (() => void) | null = null
@@ -75,11 +82,12 @@ export const createHomeSearchController = (
     closeActiveSearch()
   }
 
-  const handleRequestState = (searchToken: number, request?: RequestState) => {
+  const handleRequestState = (searchToken: number, payload: RequestPayload) => {
     if (searchToken !== activeSearchToken) {
       return
     }
-    if (isTerminalStatus(request?.status)) {
+    searchProgress.value = normalizeSearchProgress(payload.state, payload.request)
+    if (isTerminalStatus(payload.request?.status)) {
       finishSearch()
     }
   }
@@ -90,6 +98,7 @@ export const createHomeSearchController = (
 
     closeActiveSearch()
     properties.value = []
+    searchProgress.value = normalizeSearchProgress()
     hasSearched.value = true
     isLoading.value = true
     startLoadingTextAnimation()
@@ -97,10 +106,10 @@ export const createHomeSearchController = (
     try {
       activeCleanup = await startSearch(query, {
         onAccepted: (payload) => {
-          handleRequestState(searchToken, payload.request)
+          handleRequestState(searchToken, payload)
         },
         onRequest: (payload) => {
-          handleRequestState(searchToken, payload.request)
+          handleRequestState(searchToken, payload)
         },
         onUpdate: (nextProperties) => {
           if (searchToken !== activeSearchToken) {
@@ -136,6 +145,7 @@ export const createHomeSearchController = (
     isLoading,
     hasSearched,
     loadingText,
+    searchProgress,
     handleSearch,
     dispose,
   }

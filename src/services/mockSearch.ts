@@ -9,6 +9,8 @@ const sampleProperties: Property[] = [
     title: 'Sunlit Altbau Loft near Naschmarkt',
     description:
       'A meticulously restored Viennese Altbau apartment with stucco ceilings, herringbone parquet, and floor-to-ceiling windows overlooking a quiet courtyard.',
+    imageUrl:
+      'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=900&q=75',
     coordinates: { lat: 48.1992, lng: 16.3645 },
     attributes: [
       { key: 'city', label: 'City', value: 'Vienna' },
@@ -30,6 +32,8 @@ const sampleProperties: Property[] = [
     title: 'Refined Suite with Generous Dining Room',
     description:
       'Designer furnishings, a solid oak dining table seating six, and a private balcony with views over Augsburg’s historic rooftops.',
+    imageUrl:
+      'https://images.unsplash.com/photo-1615803796379-b4cda8e9c09c?auto=format&fit=crop&w=900&q=75',
     coordinates: { lat: 48.3697, lng: 10.8988 },
     attributes: [
       { key: 'city', label: 'City', value: 'Augsburg' },
@@ -49,6 +53,8 @@ const sampleProperties: Property[] = [
     sourceUrl: 'https://example.com/listings/vienna-high-bed-studio',
     title: 'Minimalist Studio with High Platform Bed',
     description: '',
+    imageUrl:
+      'https://images.unsplash.com/photo-1528914137830-c85ee162f588?auto=format&fit=crop&w=900&q=75',
     coordinates: { lat: 48.2121, lng: 16.3764 },
     attributes: [
       { key: 'city', label: 'City', value: 'Vienna' },
@@ -85,7 +91,16 @@ export const createMockStartSearch = (options: MockOptions = {}) => {
     }
 
     schedule(
-      () => handlers.onAccepted?.({ requestId: 'mock-request', request: { status: 'pending' } }),
+      () =>
+        handlers.onAccepted?.({
+          requestId: 'mock-request',
+          request: { status: 'pending' },
+          state: {
+            foundApartments: 0,
+            returnedApartmentsToFrontend: 0,
+            requestedApartmentsForInvestigation: 0,
+          },
+        }),
       50,
     )
 
@@ -104,6 +119,15 @@ export const createMockStartSearch = (options: MockOptions = {}) => {
       schedule(
         () => {
           handlers.onUpdate?.(finalProperties.slice(0, i + 1))
+          handlers.onRequest?.({
+            requestId: 'mock-request',
+            request: { status: 'running' },
+            state: {
+              foundApartments: finalProperties.length,
+              returnedApartmentsToFrontend: i + 1,
+              requestedApartmentsForInvestigation: finalProperties.length,
+            },
+          })
         },
         delayMs + i * streamStepMs,
       )
@@ -112,7 +136,15 @@ export const createMockStartSearch = (options: MockOptions = {}) => {
     schedule(
       () => {
         handlers.onUpdate?.(finalProperties)
-        handlers.onRequest?.({ requestId: 'mock-request', request: { status: 'completed' } })
+        handlers.onRequest?.({
+          requestId: 'mock-request',
+          request: { status: 'completed' },
+          state: {
+            foundApartments: finalProperties.length,
+            returnedApartmentsToFrontend: finalProperties.length,
+            requestedApartmentsForInvestigation: finalProperties.length,
+          },
+        })
       },
       delayMs + finalProperties.length * streamStepMs + 100,
     )

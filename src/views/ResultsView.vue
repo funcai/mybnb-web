@@ -14,7 +14,7 @@ const router = useRouter()
 const mockMode =
   typeof window !== 'undefined' ? resolveMockModeFromQuery(window.location.search) : null
 
-const { properties, isLoading, hasSearched, loadingText, handleSearch, dispose } =
+const { properties, isLoading, hasSearched, loadingText, searchProgress, handleSearch, dispose } =
   createHomeSearchController(mockMode ? createMockStartSearch({ mode: mockMode }) : undefined)
 
 const currentQuery = computed(() => {
@@ -122,6 +122,26 @@ const markers = computed<MapMarker[]>(() =>
   })),
 )
 
+const pluralize = (count: number, singular: string, plural = `${singular}s`): string =>
+  `${count} ${count === 1 ? singular : plural}`
+
+const progressText = computed(() => {
+  const found = searchProgress.value.foundApartments
+  if (found <= 0) {
+    return ''
+  }
+  const parts = [`${pluralize(found, 'potential apartment')} found`]
+  const returned = searchProgress.value.returnedApartmentsToFrontend
+  if (returned > 0) {
+    parts.push(`${pluralize(returned, 'result')} ready`)
+  }
+  const investigating = searchProgress.value.requestedApartmentsForInvestigation
+  if (investigating > 0) {
+    parts.push(`${pluralize(investigating, 'apartment')} being checked`)
+  }
+  return parts.join(' | ')
+})
+
 const hoveredId = ref<string | null>(null)
 const setHovered = (id: string | null) => {
   hoveredId.value = id
@@ -163,7 +183,7 @@ const onMarkerSelect = (id: string) => {
           class="font-serif text-xl font-medium normal-case tracking-tight text-[#1c1a17] hover:text-[#8b6f47]"
           @click="goHome"
         >
-          myBnB
+          42 eyes
         </button>
         <span class="hidden sm:inline">Find the exact apartment you're looking for</span>
         <span>Worldwide</span>
@@ -185,10 +205,10 @@ const onMarkerSelect = (id: string) => {
             <transition name="loading-fade" mode="out-in">
               <span
                 v-if="isLoading"
-                :key="loadingText"
+                :key="progressText || loadingText"
                 class="block font-serif text-base italic text-[#8b6f47]"
               >
-                {{ loadingText }}
+                {{ progressText || loadingText }}
               </span>
               <span
                 v-else-if="hasSearched"

@@ -28,9 +28,9 @@ const handleSearch = (query: string) => {
         <!-- Wordmark / brand row -->
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <img src="/logo.png" alt="MyBnB logo" class="h-8 w-8 opacity-90" />
+            <img src="/logo.png" alt="42 eyes logo" class="h-8 w-8 opacity-90" />
             <span class="font-serif text-lg font-medium tracking-tight text-[#1c1a17]">
-              myBnB
+              42 eyes
             </span>
           </div>
           <a
@@ -301,7 +301,7 @@ const handleSearch = (query: string) => {
       <div
         class="mx-auto flex max-w-[1400px] flex-col items-center justify-between gap-2 px-6 py-8 text-[10px] uppercase tracking-[0.32em] text-[#8a8278] sm:flex-row"
       >
-        <span>myBnB</span>
+        <span>42 eyes</span>
         <span>Powered by FlashJudge</span>
       </div>
     </footer>

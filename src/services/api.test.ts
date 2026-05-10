@@ -80,6 +80,7 @@ describe('api service', () => {
             provider: 'airbnb',
             sourceUrl: 'https://example.com/apartments/1',
             ogTitle: 'Bright studio',
+            ogImage: 'https://example.com/cover.jpg',
             description: 'Original description',
             coordinates: {
               lat: 52.5101,
@@ -111,6 +112,7 @@ describe('api service', () => {
         sourceUrl: 'https://example.com/apartments/1',
         title: 'Bright studio',
         description: 'Original description',
+        imageUrl: 'https://example.com/cover.jpg',
         coordinates: {
           lat: 52.5101,
           lng: 13.3989,
@@ -160,6 +162,25 @@ describe('api service', () => {
     expect(properties[0]).not.toHaveProperty('coordinates')
   })
 
+  it('falls back to the first gallery image when ogImage is missing', () => {
+    const properties = mapMatchingApartmentsToProperties(
+      [
+        {
+          apartmentId: 'apt-1',
+          apartment: {
+            id: 'apt-1',
+            provider: 'airbnb',
+            sourceUrl: 'https://example.com/apartments/1',
+            images: [{ url: '' }, { url: 'https://example.com/gallery.jpg' }],
+          },
+        },
+      ],
+      new Map(),
+    )
+
+    expect(properties[0]?.imageUrl).toBe('https://example.com/gallery.jpg')
+  })
+
   it('posts a search request, opens the sse stream, and closes it on cleanup', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
@@ -193,6 +214,11 @@ describe('api service', () => {
         status: 'running',
         nonFilterableQuestions: [{ id: 'q-1', question: 'Is there a nice view?' }],
       },
+      state: {
+        foundApartments: 3,
+        returnedApartmentsToFrontend: 0,
+        requestedApartmentsForInvestigation: 0,
+      },
     })
     source.emit('request', {
       requestId: 'req-123',
@@ -200,6 +226,11 @@ describe('api service', () => {
         id: 'req-123',
         status: 'completed',
         nonFilterableQuestions: [{ id: 'q-1', question: 'Is there a nice view?' }],
+      },
+      state: {
+        foundApartments: 3,
+        returnedApartmentsToFrontend: 1,
+        requestedApartmentsForInvestigation: 1,
       },
     })
     source.emit('update', [

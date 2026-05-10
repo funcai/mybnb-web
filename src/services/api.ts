@@ -5,6 +5,7 @@ import type {
   AgentMatchingApartment,
   AgentQuestionResult,
   AgentRequest,
+  AgentRequestState,
 } from '../types/agent'
 
 type EnvLike = Record<string, string | undefined>
@@ -12,9 +13,16 @@ type EnvLike = Record<string, string | undefined>
 type AcceptedPayload = {
   requestId: string
   request?: AgentRequest
+  state?: SearchProgress
 }
 
 type RequestPayload = AcceptedPayload
+
+export type SearchProgress = {
+  foundApartments: number
+  returnedApartmentsToFrontend: number
+  requestedApartmentsForInvestigation: number
+}
 
 type EventSourceLike = {
   addEventListener: (type: string, listener: (event: MessageEvent<string>) => void) => void
@@ -130,6 +138,36 @@ const mapCoordinates = (apartment: AgentApartment): Property['coordinates'] => {
   }
 }
 
+const normalizeCount = (value: unknown): number => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return 0
+  }
+  return Math.max(0, Math.trunc(value))
+}
+
+export const normalizeSearchProgress = (
+  state?: AgentRequestState,
+  request?: AgentRequest,
+): SearchProgress => ({
+  foundApartments: normalizeCount(state?.foundApartments ?? request?.foundApartments),
+  returnedApartmentsToFrontend: normalizeCount(state?.returnedApartmentsToFrontend),
+  requestedApartmentsForInvestigation: normalizeCount(state?.requestedApartmentsForInvestigation),
+})
+
+const firstImageUrl = (apartment: AgentApartment): string | undefined => {
+  const ogImage = apartment.ogImage?.trim()
+  if (ogImage) {
+    return ogImage
+  }
+  for (const image of apartment.images ?? []) {
+    const url = image.url?.trim()
+    if (url) {
+      return url
+    }
+  }
+  return undefined
+}
+
 export const mapMatchingApartmentsToProperties = (
   apartments: AgentMatchingApartment[],
   questionMap: Map<string, string>,
@@ -158,6 +196,10 @@ export const mapMatchingApartmentsToProperties = (
           .map((result) => mapQuestionScore(result, questionMap))
           .filter((result): result is PropertyQuestionScore => result !== null)
           .sort((left, right) => right.score - left.score),
+      }
+      const imageUrl = firstImageUrl(apartment)
+      if (imageUrl) {
+        property.imageUrl = imageUrl
       }
       const coordinates = mapCoordinates(apartment)
       if (coordinates) {

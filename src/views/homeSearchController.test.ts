@@ -33,9 +33,19 @@ describe('home search controller', () => {
     handlers?.onRequest?.({
       requestId: 'req-1',
       request: { status: 'completed' },
+      state: {
+        foundApartments: 4,
+        returnedApartmentsToFrontend: 1,
+        requestedApartmentsForInvestigation: 3,
+      },
     })
 
     expect(controller.isLoading.value).toBe(false)
+    expect(controller.searchProgress.value).toEqual({
+      foundApartments: 4,
+      returnedApartmentsToFrontend: 1,
+      requestedApartmentsForInvestigation: 3,
+    })
     expect(cleanup).toHaveBeenCalledTimes(1)
   })
 
