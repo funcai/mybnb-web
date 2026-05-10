@@ -128,7 +128,7 @@ const handleSearch = (query: string) => {
             class="absolute left-4 top-4 flex items-center gap-2 border border-[#f7f3ec]/80 bg-[#1c1a17]/70 px-2.5 py-1 text-[10px] uppercase tracking-[0.28em] text-[#f7f3ec] backdrop-blur-sm"
           >
             <span class="h-1.5 w-1.5 rotate-45 bg-[#8b6f47]"></span>
-            Detected · Office setup
+            Detected · Wide doorway
             <span class="ml-1 text-[#d8cfc0]">98%</span>
           </div>
           <figcaption
