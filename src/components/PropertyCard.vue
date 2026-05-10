@@ -35,14 +35,16 @@ const formatScore = (score: number): string => `${Math.round(score * 100)}%`
     @focus="emit('hover', property.id)"
     @blur="emit('hover', null)"
   >
-    <div class="flex min-h-[168px]">
-      <div class="relative w-28 shrink-0 bg-[#efe9de] sm:w-40">
+    <div class="flex flex-col sm:min-h-[168px] sm:flex-row">
+      <div
+        class="relative aspect-[16/10] w-full shrink-0 bg-[#efe9de] sm:aspect-auto sm:w-48 md:w-56"
+      >
         <img
           v-if="property.imageUrl"
           :src="property.imageUrl"
           :alt="property.title"
           loading="lazy"
-          class="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+          class="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-[1.03]"
         />
         <div
           v-else

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useRoute, useRouter } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 
 import SearchBar from '../components/SearchBar.vue'
 import DetectionBox from '../components/DetectionBox.vue'
@@ -302,6 +302,9 @@ const handleSearch = (query: string) => {
         class="mx-auto flex max-w-[1400px] flex-col items-center justify-between gap-2 px-6 py-8 text-[10px] uppercase tracking-[0.32em] text-[#8a8278] sm:flex-row"
       >
         <span>42 eyes</span>
+        <RouterLink :to="{ name: 'contact' }" class="transition-colors hover:text-[#8b6f47]">
+          Contact us
+        </RouterLink>
         <span>Powered by FlashJudge</span>
       </div>
     </footer>

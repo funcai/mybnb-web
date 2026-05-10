@@ -195,7 +195,7 @@ const onMarkerSelect = (id: string) => {
            Mobile: regular page-flow scrolling so the brand header scrolls away.
            Desktop: independent scroll container next to the always-visible map. -->
       <section
-        class="flex flex-1 flex-col border-b border-[#e6e0d6] lg:min-h-0 lg:max-w-[640px] lg:overflow-y-auto lg:border-b-0 lg:border-r"
+        class="flex flex-1 flex-col border-b border-[#e6e0d6] lg:min-h-0 lg:w-full lg:max-w-[850px] lg:flex-none lg:overflow-y-auto lg:border-b-0 lg:border-r"
       >
         <div
           class="sticky top-0 z-10 border-b border-[#e6e0d6] bg-[#f7f3ec]/95 px-4 py-4 backdrop-blur-sm sm:px-6 sm:py-6"
