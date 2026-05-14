@@ -7,7 +7,7 @@ export interface PropertyAttribute {
 export interface PropertyQuestionScore {
   questionId: string
   question: string
-  score: number
+  score?: number
 }
 
 export interface PropertyCoordinates {

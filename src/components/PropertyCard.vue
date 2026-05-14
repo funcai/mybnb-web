@@ -15,7 +15,8 @@ const emit = defineEmits<{
   hover: [id: string | null]
 }>()
 
-const formatScore = (score: number): string => `${Math.round(score * 100)}%`
+const formatScore = (score?: number): string =>
+  typeof score === 'number' ? `${Math.round(score * 100)}%` : 'Pending'
 </script>
 
 <template>

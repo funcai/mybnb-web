@@ -1,11 +1,13 @@
-import { ref, type Ref } from 'vue'
+import { computed, ref, type Ref } from 'vue'
 
 import type { Property } from '../types/property'
 import type { SearchHandlers, SearchProgress } from '../services/api'
 import { normalizeSearchProgress, startSearch as defaultStartSearch } from '../services/api'
+import type { AgentQuestion } from '../types/agent'
 
 type RequestState = {
   status?: string
+  nonFilterableQuestions?: AgentQuestion[]
 }
 
 type RequestPayload = {
@@ -15,13 +17,22 @@ type RequestPayload = {
 
 type StartSearchFn = (searchQuery: string, handlers: SearchHandlers) => Promise<() => void>
 
+export type MlQuestion = {
+  id: string
+  question: string
+  scoringType?: string
+}
+
 type HomeSearchController = {
-  properties: Ref<Property[]>
+  properties: Readonly<Ref<Property[]>>
+  mlQuestions: Ref<MlQuestion[]>
+  enabledQuestionIds: Ref<Set<string>>
   isLoading: Ref<boolean>
   hasSearched: Ref<boolean>
   loadingText: Ref<string>
   searchProgress: Ref<SearchProgress>
   handleSearch: (query: string) => Promise<void>
+  toggleQuestionFilter: (questionId: string) => void
   dispose: () => void
 }
 
@@ -39,10 +50,51 @@ const loadingMessages = [
 
 const isTerminalStatus = (status?: string): boolean => status === 'completed' || status === 'failed'
 
+const normalizeMlQuestions = (questions?: AgentQuestion[]): MlQuestion[] =>
+  (questions ?? [])
+    .map((question): MlQuestion | null => {
+      const id = question.id?.trim()
+      const text = question.question?.trim()
+      if (!id || !text) {
+        return null
+      }
+      const normalized: MlQuestion = {
+        id,
+        question: text,
+      }
+      const scoringType = question.scoringType?.trim()
+      if (scoringType) {
+        normalized.scoringType = scoringType
+      }
+      return normalized
+    })
+    .filter((question): question is MlQuestion => question !== null)
+
+export const propertyMatchesEnabledQuestions = (
+  property: Property,
+  enabledQuestionIds: Set<string>,
+): boolean => {
+  for (const questionId of enabledQuestionIds) {
+    const score = property.questionScores.find((questionScore) => questionScore.questionId === questionId)
+      ?.score
+    if (typeof score !== 'number' || score < 0.5) {
+      return false
+    }
+  }
+  return true
+}
+
 export const createHomeSearchController = (
   startSearch: StartSearchFn = defaultStartSearch,
 ): HomeSearchController => {
-  const properties = ref<Property[]>([])
+  const allProperties = ref<Property[]>([])
+  const mlQuestions = ref<MlQuestion[]>([])
+  const enabledQuestionIds = ref<Set<string>>(new Set())
+  const properties = computed(() =>
+    allProperties.value.filter((property) =>
+      propertyMatchesEnabledQuestions(property, enabledQuestionIds.value),
+    ),
+  )
   const isLoading = ref(false)
   const hasSearched = ref(false)
   const loadingText = ref('Starting your apartment search...')
@@ -82,10 +134,32 @@ export const createHomeSearchController = (
     closeActiveSearch()
   }
 
+  const syncMlQuestions = (questions?: AgentQuestion[]) => {
+    const nextQuestions = normalizeMlQuestions(questions)
+    const previousIds = new Set(mlQuestions.value.map((question) => question.id))
+    const nextIds = new Set(nextQuestions.map((question) => question.id))
+    const nextEnabled = new Set(enabledQuestionIds.value)
+
+    for (const question of nextQuestions) {
+      if (!previousIds.has(question.id)) {
+        nextEnabled.add(question.id)
+      }
+    }
+    for (const questionId of nextEnabled) {
+      if (!nextIds.has(questionId)) {
+        nextEnabled.delete(questionId)
+      }
+    }
+
+    mlQuestions.value = nextQuestions
+    enabledQuestionIds.value = nextEnabled
+  }
+
   const handleRequestState = (searchToken: number, payload: RequestPayload) => {
     if (searchToken !== activeSearchToken) {
       return
     }
+    syncMlQuestions(payload.request?.nonFilterableQuestions)
     searchProgress.value = normalizeSearchProgress(payload.state, payload.request)
     if (isTerminalStatus(payload.request?.status)) {
       finishSearch()
@@ -97,7 +171,9 @@ export const createHomeSearchController = (
     const searchToken = activeSearchToken
 
     closeActiveSearch()
-    properties.value = []
+    allProperties.value = []
+    mlQuestions.value = []
+    enabledQuestionIds.value = new Set()
     searchProgress.value = normalizeSearchProgress()
     hasSearched.value = true
     isLoading.value = true
@@ -115,7 +191,7 @@ export const createHomeSearchController = (
           if (searchToken !== activeSearchToken) {
             return
           }
-          properties.value = nextProperties
+          allProperties.value = nextProperties
         },
         onError: (error) => {
           if (searchToken !== activeSearchToken) {
@@ -140,13 +216,26 @@ export const createHomeSearchController = (
     closeActiveSearch()
   }
 
+  const toggleQuestionFilter = (questionId: string) => {
+    const next = new Set(enabledQuestionIds.value)
+    if (next.has(questionId)) {
+      next.delete(questionId)
+    } else {
+      next.add(questionId)
+    }
+    enabledQuestionIds.value = next
+  }
+
   return {
     properties,
+    mlQuestions,
+    enabledQuestionIds,
     isLoading,
     hasSearched,
     loadingText,
     searchProgress,
     handleSearch,
+    toggleQuestionFilter,
     dispose,
   }
 }

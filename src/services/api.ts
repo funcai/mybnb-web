@@ -183,6 +183,12 @@ export const mapMatchingApartmentsToProperties = (
       if (!id || !sourceUrl) {
         return null
       }
+      const resultScores = new Map(
+        (entry.nonFilterableQuestionResults ?? [])
+          .map((result) => mapQuestionScore(result, questionMap))
+          .filter((result): result is PropertyQuestionScore => result !== null)
+          .map((result) => [result.questionId, result.score] as const),
+      )
       const property: Property = {
         id,
         provider: apartment.provider?.trim() || 'unknown',
@@ -192,10 +198,16 @@ export const mapMatchingApartmentsToProperties = (
         attributes: (apartment.attributes ?? [])
           .map((attribute) => mapAttribute(attribute))
           .filter((attribute): attribute is PropertyAttribute => attribute !== null),
-        questionScores: (entry.nonFilterableQuestionResults ?? [])
-          .map((result) => mapQuestionScore(result, questionMap))
-          .filter((result): result is PropertyQuestionScore => result !== null)
-          .sort((left, right) => right.score - left.score),
+        questionScores:
+          questionMap.size > 0
+            ? Array.from(questionMap.entries()).map(([questionId, question]) => ({
+                questionId,
+                question,
+                score: resultScores.get(questionId),
+              }))
+            : (entry.nonFilterableQuestionResults ?? [])
+                .map((result) => mapQuestionScore(result, questionMap))
+                .filter((result): result is PropertyQuestionScore => result !== null),
       }
       const imageUrl = firstImageUrl(apartment)
       if (imageUrl) {

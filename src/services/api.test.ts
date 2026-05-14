@@ -162,6 +162,31 @@ describe('api service', () => {
     expect(properties[0]).not.toHaveProperty('coordinates')
   })
 
+  it('includes missing ml question scores so cards can show pending questions', () => {
+    const properties = mapMatchingApartmentsToProperties(
+      [
+        {
+          apartmentId: 'apt-1',
+          apartment: {
+            id: 'apt-1',
+            provider: 'airbnb',
+            sourceUrl: 'https://example.com/apartments/1',
+          },
+          nonFilterableQuestionResults: [{ nonFilterableQuestionId: 'q-1', score: 1 }],
+        },
+      ],
+      new Map([
+        ['q-1', 'Has a balcony?'],
+        ['q-2', 'Has blue towels?'],
+      ]),
+    )
+
+    expect(properties[0]?.questionScores).toEqual([
+      { questionId: 'q-1', question: 'Has a balcony?', score: 1 },
+      { questionId: 'q-2', question: 'Has blue towels?', score: undefined },
+    ])
+  })
+
   it('falls back to the first gallery image when ogImage is missing', () => {
     const properties = mapMatchingApartmentsToProperties(
       [

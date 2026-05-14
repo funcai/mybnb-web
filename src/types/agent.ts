@@ -1,6 +1,7 @@
 export interface AgentQuestion {
   id?: string
   question?: string
+  scoringType?: string
 }
 
 export interface AgentRequest {

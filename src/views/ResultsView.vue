@@ -14,8 +14,18 @@ const router = useRouter()
 const mockMode =
   typeof window !== 'undefined' ? resolveMockModeFromQuery(window.location.search) : null
 
-const { properties, isLoading, hasSearched, loadingText, searchProgress, handleSearch, dispose } =
-  createHomeSearchController(mockMode ? createMockStartSearch({ mode: mockMode }) : undefined)
+const {
+  properties,
+  mlQuestions,
+  enabledQuestionIds,
+  isLoading,
+  hasSearched,
+  loadingText,
+  searchProgress,
+  handleSearch,
+  toggleQuestionFilter,
+  dispose,
+} = createHomeSearchController(mockMode ? createMockStartSearch({ mode: mockMode }) : undefined)
 
 const currentQuery = computed(() => {
   const q = route.query.q
@@ -218,6 +228,26 @@ const onMarkerSelect = (id: string) => {
                 {{ properties.length }} properties found
               </span>
             </transition>
+          </div>
+          <div v-if="mlQuestions.length > 0" class="mt-4 flex flex-wrap gap-2">
+            <label
+              v-for="question in mlQuestions"
+              :key="question.id"
+              class="inline-flex cursor-pointer items-center gap-2 border px-2.5 py-1.5 text-[11px] leading-snug transition-colors"
+              :class="
+                enabledQuestionIds.has(question.id)
+                  ? 'border-[#8b6f47] bg-[#8b6f47]/10 text-[#6f5836]'
+                  : 'border-[#d8cfc0] bg-white/45 text-[#8a8278]'
+              "
+            >
+              <input
+                type="checkbox"
+                class="h-3.5 w-3.5 accent-[#8b6f47]"
+                :checked="enabledQuestionIds.has(question.id)"
+                @change="toggleQuestionFilter(question.id)"
+              />
+              <span>{{ question.question }}</span>
+            </label>
           </div>
         </div>
 
