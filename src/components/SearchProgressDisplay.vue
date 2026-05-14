@@ -2,6 +2,12 @@
 import { computed, onUnmounted, ref, watch } from 'vue'
 
 import type { SearchProgress } from '../services/api'
+import {
+  searchProgressPercent,
+  searchProgressStats,
+  searchProgressTargetValues,
+  type SearchProgressStatKey,
+} from './searchProgressStats'
 
 const props = defineProps<{
   isLoading: boolean
@@ -13,25 +19,25 @@ const props = defineProps<{
 
 const tweenDurationMs = 450
 
-type CounterKey = 'found' | 'checking' | 'matched'
+const targetValues = computed(() => searchProgressTargetValues(props.progress, props.resultsCount))
 
-const targetValues = computed<Record<CounterKey, number>>(() => ({
-  found: props.progress.foundApartments,
-  checking: props.progress.requestedApartmentsForInvestigation,
-  matched: props.progress.returnedApartmentsToFrontend,
-}))
+const displayed = ref<Record<SearchProgressStatKey, number>>({
+  found: 0,
+  queued: 0,
+  analyzed: 0,
+  matched: 0,
+})
 
-const displayed = ref<Record<CounterKey, number>>({ found: 0, checking: 0, matched: 0 })
-
-const activeTweens: Record<CounterKey, number | null> = {
+const activeTweens: Record<SearchProgressStatKey, number | null> = {
   found: null,
-  checking: null,
+  queued: null,
+  analyzed: null,
   matched: null,
 }
 
 const easeOutCubic = (linearProgress: number): number => 1 - Math.pow(1 - linearProgress, 3)
 
-const tweenCounter = (key: CounterKey, nextValue: number) => {
+const tweenCounter = (key: SearchProgressStatKey, nextValue: number) => {
   const startValue = displayed.value[key]
   if (startValue === nextValue) return
   if (activeTweens[key] !== null) {
@@ -57,7 +63,7 @@ const tweenCounter = (key: CounterKey, nextValue: number) => {
 watch(
   targetValues,
   (next) => {
-    ;(Object.keys(next) as CounterKey[]).forEach((key) => tweenCounter(key, next[key]))
+    ;(Object.keys(next) as SearchProgressStatKey[]).forEach((key) => tweenCounter(key, next[key]))
   },
   { immediate: true, deep: true },
 )
@@ -73,41 +79,18 @@ watch(
 )
 
 onUnmounted(() => {
-  ;(Object.keys(activeTweens) as CounterKey[]).forEach((key) => {
+  ;(Object.keys(activeTweens) as SearchProgressStatKey[]).forEach((key) => {
     if (activeTweens[key] !== null) cancelAnimationFrame(activeTweens[key] as number)
   })
 })
 
-const progressPercent = computed(() => {
-  const found = targetValues.value.found
-  if (found <= 0) return 0
-  const matched = targetValues.value.matched
-  return Math.min(100, Math.round((matched / found) * 100))
-})
+const progressPercent = computed(() =>
+  searchProgressPercent(targetValues.value, props.resultsCount),
+)
 
-const stats = computed(() => [
-  {
-    key: 'found' as const,
-    label: 'Candidates',
-    value: displayed.value.found,
-    accent: false,
-    pulse: props.isLoading,
-  },
-  {
-    key: 'checking' as const,
-    label: 'Investigating',
-    value: displayed.value.checking,
-    accent: false,
-    pulse: props.isLoading && targetValues.value.checking > 0,
-  },
-  {
-    key: 'matched' as const,
-    label: 'Matches',
-    value: displayed.value.matched,
-    accent: true,
-    pulse: false,
-  },
-])
+const stats = computed(() =>
+  searchProgressStats(displayed.value, targetValues.value, props.isLoading),
+)
 
 const showProgressUi = computed(
   () => props.isLoading || targetValues.value.found > 0 || props.hasSearched,
