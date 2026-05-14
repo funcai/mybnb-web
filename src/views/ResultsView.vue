@@ -12,6 +12,14 @@ import {
 } from '../services/mockSearch'
 import { buildSearchRoute } from '../router/searchRoute'
 import { createHomeSearchController } from './homeSearchController'
+import {
+  locationFallbackZoom,
+  locationHintBounds,
+  locationHintCenter,
+  propertyCoordinateCenter,
+  worldCenter,
+  worldZoom,
+} from './searchMapViewport'
 import MapView, { type MapMarker } from '../components/MapView.vue'
 
 const route = useRoute()
@@ -29,6 +37,7 @@ const {
   hasSearched,
   loadingText,
   searchProgress,
+  locationHint,
   connectToSearch,
   toggleQuestionFilter,
   dispose,
@@ -93,47 +102,25 @@ onUnmounted(() => {
   dispose()
 })
 
-// Try to bias the map toward the city mentioned in the query (cheap heuristic).
-const cityHint = computed(() => {
-  const q = currentQuery.value.toLowerCase()
-  const cities: Record<string, [number, number]> = {
-    vienna: [16.3738, 48.2082],
-    wien: [16.3738, 48.2082],
-    augsburg: [10.8978, 48.3705],
-    berlin: [13.405, 52.52],
-    munich: [11.582, 48.1351],
-    münchen: [11.582, 48.1351],
-    hamburg: [9.9937, 53.5511],
-  }
-  for (const name of Object.keys(cities)) {
-    if (q.includes(name)) return { name, center: cities[name] }
-  }
-  return null
-})
-
 const propertyCoordinates = computed(() =>
   properties.value.filter((property) => property.coordinates !== undefined),
 )
 
 const mapCenter = computed<[number, number]>(() => {
-  if (cityHint.value) return cityHint.value.center
-  if (propertyCoordinates.value.length > 0) {
-    const totals = propertyCoordinates.value.reduce(
-      (acc, property) => {
-        acc.lng += property.coordinates?.lng ?? 0
-        acc.lat += property.coordinates?.lat ?? 0
-        return acc
-      },
-      { lng: 0, lat: 0 },
-    )
-    return [
-      totals.lng / propertyCoordinates.value.length,
-      totals.lat / propertyCoordinates.value.length,
-    ]
-  }
-  return [10.4515, 51.1657]
+  return (
+    propertyCoordinateCenter(properties.value) ??
+    locationHintCenter(locationHint.value) ??
+    worldCenter
+  )
 })
-const mapZoom = computed(() => (cityHint.value || propertyCoordinates.value.length > 0 ? 11 : 4.5))
+const mapBounds = computed(() =>
+  propertyCoordinates.value.length > 0 ? null : locationHintBounds(locationHint.value),
+)
+const mapZoom = computed(() =>
+  propertyCoordinates.value.length > 0 || locationHintCenter(locationHint.value)
+    ? locationFallbackZoom
+    : worldZoom,
+)
 
 const markers = computed<MapMarker[]>(() =>
   propertyCoordinates.value.map((property) => ({
@@ -288,6 +275,7 @@ const onMarkerSelect = (id: string) => {
         <MapView
           :center="mapCenter"
           :zoom="mapZoom"
+          :bounds="mapBounds"
           :markers="markers"
           :highlightedId="hoveredId"
           @hover="setHovered"

@@ -32,7 +32,14 @@ describe('home search controller', () => {
 
     handlers?.onRequest?.({
       requestId: 'req-1',
-      request: { status: 'completed' },
+      request: {
+        status: 'completed',
+        locationHint: {
+          query: 'Berlin, Germany',
+          provider: 'photon',
+          center: { lat: 52.52, lng: 13.405 },
+        },
+      },
       state: {
         foundApartments: 4,
         returnedApartmentsToFrontend: 1,
@@ -46,6 +53,11 @@ describe('home search controller', () => {
       foundApartments: 4,
       returnedApartmentsToFrontend: 1,
       requestedApartmentsForInvestigation: 3,
+    })
+    expect(controller.locationHint.value).toEqual({
+      query: 'Berlin, Germany',
+      provider: 'photon',
+      center: { lat: 52.52, lng: 13.405 },
     })
 
     handlers?.onUpdate?.([property])

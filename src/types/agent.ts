@@ -9,6 +9,7 @@ export interface AgentRequest {
   status?: string
   foundApartments?: number
   nonFilterableQuestions?: AgentQuestion[]
+  locationHint?: AgentLocationHint
 }
 
 export interface AgentRequestState {
@@ -27,6 +28,21 @@ export interface AgentCoordinates {
   lng?: number
   source?: string
   accuracy?: string
+}
+
+export interface AgentLocationHint {
+  query?: string
+  provider?: string
+  center?: {
+    lat?: number
+    lng?: number
+  }
+  bbox?: {
+    south?: number
+    west?: number
+    north?: number
+    east?: number
+  }
 }
 
 export interface AgentApartment {

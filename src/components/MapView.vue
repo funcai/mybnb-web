@@ -12,16 +12,20 @@ export type MapMarker = {
   label?: string
 }
 
+type MapBounds = [[number, number], [number, number]]
+
 const props = withDefaults(
   defineProps<{
     center?: [number, number]
     zoom?: number
+    bounds?: MapBounds | null
     markers?: MapMarker[]
     highlightedId?: string | null
   }>(),
   {
     center: () => [10.4515, 51.1657],
     zoom: 4.5,
+    bounds: null,
     markers: () => [],
     highlightedId: null,
   },
@@ -129,6 +133,18 @@ const fitToMarkers = () => {
   })
 }
 
+const fitToBounds = () => {
+  if (!map || !mapReady || userControlledViewport || props.markers.length > 0 || !props.bounds)
+    return
+
+  map.fitBounds(props.bounds, {
+    padding: 72,
+    maxZoom: 12,
+    duration: 650,
+    essential: true,
+  })
+}
+
 onMounted(() => {
   if (!container.value) return
   map = new maplibregl.Map({
@@ -147,6 +163,7 @@ onMounted(() => {
   map.on('load', () => {
     mapReady = true
     syncMarkers()
+    fitToBounds()
   })
 
   // Maplibre listens to window resize but not to its container's size changing
@@ -166,6 +183,7 @@ watch(
       !map ||
       userControlledViewport ||
       props.markers.length > 0 ||
+      props.bounds ||
       lng === undefined ||
       lat === undefined
     )
@@ -174,6 +192,7 @@ watch(
   },
 )
 
+watch(() => props.bounds, fitToBounds, { deep: true })
 watch(() => props.markers, syncMarkers, { deep: true })
 watch(() => props.highlightedId, applyHighlight)
 

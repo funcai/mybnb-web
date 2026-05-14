@@ -6,11 +6,12 @@ import {
   normalizeSearchProgress,
   subscribeToSearch as defaultSubscribeToSearch,
 } from '../services/api'
-import type { AgentQuestion } from '../types/agent'
+import type { AgentLocationHint, AgentQuestion } from '../types/agent'
 
 type RequestState = {
   status?: string
   nonFilterableQuestions?: AgentQuestion[]
+  locationHint?: AgentLocationHint
 }
 
 type RequestPayload = {
@@ -37,6 +38,7 @@ type HomeSearchController = {
   hasSearched: Ref<boolean>
   loadingText: Ref<string>
   searchProgress: Ref<SearchProgress>
+  locationHint: Ref<AgentLocationHint | null>
   connectToSearch: (requestId: string) => Promise<void>
   toggleQuestionFilter: (questionId: string) => void
   dispose: () => void
@@ -106,6 +108,7 @@ export const createHomeSearchController = (
   const hasSearched = ref(false)
   const loadingText = ref('Starting your apartment search...')
   const searchProgress = ref<SearchProgress>(normalizeSearchProgress())
+  const locationHint = ref<AgentLocationHint | null>(null)
 
   let loadingInterval: ReturnType<typeof setInterval> | null = null
   let activeCleanup: (() => void) | null = null
@@ -174,6 +177,7 @@ export const createHomeSearchController = (
       return
     }
     syncMlQuestions(payload.request?.nonFilterableQuestions)
+    locationHint.value = payload.request?.locationHint ?? null
     searchProgress.value = normalizeSearchProgress(payload.state, payload.request)
     if (isTerminalStatus(payload.request?.status)) {
       finishSearchAfterNextUpdate(searchToken)
@@ -189,6 +193,7 @@ export const createHomeSearchController = (
     allProperties.value = []
     mlQuestions.value = []
     enabledQuestionIds.value = new Set()
+    locationHint.value = null
     searchProgress.value = normalizeSearchProgress()
     hasSearched.value = true
     isLoading.value = true
@@ -254,6 +259,7 @@ export const createHomeSearchController = (
     hasSearched,
     loadingText,
     searchProgress,
+    locationHint,
     connectToSearch,
     toggleQuestionFilter,
     dispose,
