@@ -249,17 +249,26 @@ export const bootBackend = async (env: EnvLike = import.meta.env): Promise<void>
   }
 }
 
-export const startSearch = async (
+export const createSearch = async (
   searchQuery: string,
-  handlers: SearchHandlers,
-  options: StartSearchOptions = {},
-): Promise<() => void> => {
+  options: { env?: EnvLike } = {},
+): Promise<string> => {
   const env = options.env ?? import.meta.env
-  const eventSourceFactory = options.eventSourceFactory ?? defaultEventSourceFactory
   const baseUrl = resolveAgentBaseUrl(env)
   const { requestId } = await postJson<{ requestId: string }>(`${baseUrl}/requests`, {
     searchQuery,
   })
+  return requestId
+}
+
+export const subscribeToSearch = (
+  requestId: string,
+  handlers: SearchHandlers,
+  options: StartSearchOptions = {},
+): (() => void) => {
+  const env = options.env ?? import.meta.env
+  const eventSourceFactory = options.eventSourceFactory ?? defaultEventSourceFactory
+  const baseUrl = resolveAgentBaseUrl(env)
   let questionMap = new Map<string, string>()
 
   const source = eventSourceFactory(`${baseUrl}/requests/${encodeURIComponent(requestId)}`)

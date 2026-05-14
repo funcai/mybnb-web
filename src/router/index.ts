@@ -2,6 +2,12 @@ import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import ResultsView from '../views/ResultsView.vue'
 import ContactView from '../views/ContactView.vue'
+import {
+  searchLegacyRouteName,
+  searchLegacyRoutePath,
+  searchRouteName,
+  searchRoutePath,
+} from './searchRoute'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -12,8 +18,13 @@ const router = createRouter({
       component: HomeView,
     },
     {
-      path: '/search',
-      name: 'search',
+      path: searchRoutePath,
+      name: searchRouteName,
+      component: ResultsView,
+    },
+    {
+      path: searchLegacyRoutePath,
+      name: searchLegacyRouteName,
       component: ResultsView,
     },
     {

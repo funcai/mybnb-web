@@ -3,9 +3,10 @@ import { readFileSync } from 'node:fs'
 
 import {
   bootBackend,
+  createSearch,
   mapMatchingApartmentsToProperties,
   resolveAgentBaseUrl,
-  startSearch,
+  subscribeToSearch,
 } from './api'
 
 class FakeEventSource {
@@ -206,11 +207,29 @@ describe('api service', () => {
     expect(properties[0]?.imageUrl).toBe('https://example.com/gallery.jpg')
   })
 
-  it('posts a search request, opens the sse stream, and closes it on cleanup', async () => {
+  it('posts a search request and returns the request id', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ requestId: 'req-123' }),
     })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const requestId = await createSearch('apartment in berlin', {
+      env: { VITE_AGENT_BASE_URL: 'https://agent.example/api' },
+    })
+
+    expect(requestId).toBe('req-123')
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://agent.example/api/requests',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ searchQuery: 'apartment in berlin' }),
+      }),
+    )
+  })
+
+  it('opens the sse stream for an existing request and closes it on cleanup', () => {
+    const fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
 
     const source = new FakeEventSource()
@@ -219,8 +238,8 @@ describe('api service', () => {
     const request = vi.fn()
     const update = vi.fn()
 
-    const cleanup = await startSearch(
-      'apartment in berlin',
+    const cleanup = subscribeToSearch(
+      'req-123',
       {
         onAccepted: accepted,
         onRequest: request,
@@ -274,13 +293,7 @@ describe('api service', () => {
 
     cleanup()
 
-    expect(fetchMock).toHaveBeenCalledWith(
-      'https://agent.example/api/requests',
-      expect.objectContaining({
-        method: 'POST',
-        body: JSON.stringify({ searchQuery: 'apartment in berlin' }),
-      }),
-    )
+    expect(fetchMock).not.toHaveBeenCalled()
     expect(eventSourceFactory).toHaveBeenCalledWith('https://agent.example/api/requests/req-123')
     expect(accepted).toHaveBeenCalledWith(expect.objectContaining({ requestId: 'req-123' }))
     expect(request).toHaveBeenCalledWith(

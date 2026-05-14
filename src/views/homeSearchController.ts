@@ -2,7 +2,10 @@ import { computed, ref, type Ref } from 'vue'
 
 import type { Property } from '../types/property'
 import type { SearchHandlers, SearchProgress } from '../services/api'
-import { normalizeSearchProgress, startSearch as defaultStartSearch } from '../services/api'
+import {
+  normalizeSearchProgress,
+  subscribeToSearch as defaultSubscribeToSearch,
+} from '../services/api'
 import type { AgentQuestion } from '../types/agent'
 
 type RequestState = {
@@ -15,7 +18,10 @@ type RequestPayload = {
   state?: SearchProgress
 }
 
-type StartSearchFn = (searchQuery: string, handlers: SearchHandlers) => Promise<() => void>
+type SubscribeToSearchFn = (
+  requestId: string,
+  handlers: SearchHandlers,
+) => (() => void) | Promise<() => void>
 
 export type MlQuestion = {
   id: string
@@ -31,7 +37,7 @@ type HomeSearchController = {
   hasSearched: Ref<boolean>
   loadingText: Ref<string>
   searchProgress: Ref<SearchProgress>
-  handleSearch: (query: string) => Promise<void>
+  connectToSearch: (requestId: string) => Promise<void>
   toggleQuestionFilter: (questionId: string) => void
   dispose: () => void
 }
@@ -75,8 +81,9 @@ export const propertyMatchesEnabledQuestions = (
   enabledQuestionIds: Set<string>,
 ): boolean => {
   for (const questionId of enabledQuestionIds) {
-    const score = property.questionScores.find((questionScore) => questionScore.questionId === questionId)
-      ?.score
+    const score = property.questionScores.find(
+      (questionScore) => questionScore.questionId === questionId,
+    )?.score
     if (typeof score !== 'number' || score < 0.5) {
       return false
     }
@@ -85,7 +92,7 @@ export const propertyMatchesEnabledQuestions = (
 }
 
 export const createHomeSearchController = (
-  startSearch: StartSearchFn = defaultStartSearch,
+  subscribeToSearch: SubscribeToSearchFn = defaultSubscribeToSearch,
 ): HomeSearchController => {
   const allProperties = ref<Property[]>([])
   const mlQuestions = ref<MlQuestion[]>([])
@@ -103,6 +110,7 @@ export const createHomeSearchController = (
   let loadingInterval: ReturnType<typeof setInterval> | null = null
   let activeCleanup: (() => void) | null = null
   let activeSearchToken = 0
+  let closeAfterNextUpdateToken: number | null = null
 
   const stopLoadingTextAnimation = () => {
     if (loadingInterval !== null) {
@@ -134,6 +142,12 @@ export const createHomeSearchController = (
     closeActiveSearch()
   }
 
+  const finishSearchAfterNextUpdate = (searchToken: number) => {
+    isLoading.value = false
+    stopLoadingTextAnimation()
+    closeAfterNextUpdateToken = searchToken
+  }
+
   const syncMlQuestions = (questions?: AgentQuestion[]) => {
     const nextQuestions = normalizeMlQuestions(questions)
     const previousIds = new Set(mlQuestions.value.map((question) => question.id))
@@ -162,15 +176,16 @@ export const createHomeSearchController = (
     syncMlQuestions(payload.request?.nonFilterableQuestions)
     searchProgress.value = normalizeSearchProgress(payload.state, payload.request)
     if (isTerminalStatus(payload.request?.status)) {
-      finishSearch()
+      finishSearchAfterNextUpdate(searchToken)
     }
   }
 
-  const handleSearch = async (query: string): Promise<void> => {
+  const connectToSearch = async (requestId: string): Promise<void> => {
     activeSearchToken += 1
     const searchToken = activeSearchToken
 
     closeActiveSearch()
+    closeAfterNextUpdateToken = null
     allProperties.value = []
     mlQuestions.value = []
     enabledQuestionIds.value = new Set()
@@ -180,7 +195,7 @@ export const createHomeSearchController = (
     startLoadingTextAnimation()
 
     try {
-      activeCleanup = await startSearch(query, {
+      activeCleanup = await subscribeToSearch(requestId, {
         onAccepted: (payload) => {
           handleRequestState(searchToken, payload)
         },
@@ -192,6 +207,10 @@ export const createHomeSearchController = (
             return
           }
           allProperties.value = nextProperties
+          if (closeAfterNextUpdateToken === searchToken) {
+            closeAfterNextUpdateToken = null
+            closeActiveSearch()
+          }
         },
         onError: (error) => {
           if (searchToken !== activeSearchToken) {
@@ -212,6 +231,7 @@ export const createHomeSearchController = (
 
   const dispose = () => {
     activeSearchToken += 1
+    closeAfterNextUpdateToken = null
     stopLoadingTextAnimation()
     closeActiveSearch()
   }
@@ -234,7 +254,7 @@ export const createHomeSearchController = (
     hasSearched,
     loadingText,
     searchProgress,
-    handleSearch,
+    connectToSearch,
     toggleQuestionFilter,
     dispose,
   }

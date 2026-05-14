@@ -4,7 +4,13 @@ import { useRoute, useRouter } from 'vue-router'
 
 import PropertyList from '../components/PropertyList.vue'
 import SearchBar from '../components/SearchBar.vue'
-import { createMockStartSearch, resolveMockModeFromQuery } from '../services/mockSearch'
+import { createSearch as defaultCreateSearch } from '../services/api'
+import {
+  createMockCreateSearch,
+  createMockSubscribeToSearch,
+  resolveMockModeFromQuery,
+} from '../services/mockSearch'
+import { buildSearchRoute } from '../router/searchRoute'
 import { createHomeSearchController } from './homeSearchController'
 import MapView, { type MapMarker } from '../components/MapView.vue'
 
@@ -13,6 +19,7 @@ const router = useRouter()
 
 const mockMode =
   typeof window !== 'undefined' ? resolveMockModeFromQuery(window.location.search) : null
+const createSearch = mockMode ? createMockCreateSearch() : defaultCreateSearch
 
 const {
   properties,
@@ -22,35 +29,45 @@ const {
   hasSearched,
   loadingText,
   searchProgress,
-  handleSearch,
+  connectToSearch,
   toggleQuestionFilter,
   dispose,
-} = createHomeSearchController(mockMode ? createMockStartSearch({ mode: mockMode }) : undefined)
+} = createHomeSearchController(
+  mockMode ? createMockSubscribeToSearch({ mode: mockMode }) : undefined,
+)
 
 const currentQuery = computed(() => {
   const q = route.query.q
   return typeof q === 'string' ? q : ''
 })
 
-const runSearchForRoute = () => {
-  const q = currentQuery.value.trim()
-  if (!q) return
-  void handleSearch(q)
-}
+const currentRequestId = computed(() => {
+  const requestId = route.params.requestId
+  return typeof requestId === 'string' ? requestId : ''
+})
 
-const onSubmit = (query: string) => {
-  const trimmed = query.trim()
-  if (!trimmed) return
-  if (trimmed === currentQuery.value) {
-    void handleSearch(trimmed)
+const connectToRouteRequest = () => {
+  const requestId = currentRequestId.value.trim()
+  if (!requestId) {
+    router.replace({ name: 'home' })
     return
   }
-  // URL change triggers the watcher below, which kicks off the search.
+  void connectToSearch(requestId)
+}
+
+const onSubmit = async (query: string) => {
+  const trimmed = query.trim()
+  if (!trimmed) return
   const passthrough: Record<string, string> = {}
   for (const [key, value] of Object.entries(route.query)) {
     if (typeof value === 'string' && key !== 'q') passthrough[key] = value
   }
-  router.replace({ name: 'search', query: { ...passthrough, q: trimmed } })
+  try {
+    const requestId = await createSearch(trimmed)
+    router.replace(buildSearchRoute(requestId, trimmed, passthrough))
+  } catch (error) {
+    console.error('Failed to create search:', error)
+  }
 }
 
 const goHome = () => {
@@ -62,19 +79,14 @@ const goHome = () => {
 }
 
 watch(
-  () => currentQuery.value,
+  () => currentRequestId.value,
   () => {
-    runSearchForRoute()
+    connectToRouteRequest()
   },
 )
 
 onMounted(() => {
-  if (!currentQuery.value) {
-    // Refresh on /search with no query: bounce back home.
-    router.replace({ name: 'home' })
-    return
-  }
-  runSearchForRoute()
+  connectToRouteRequest()
 })
 
 onUnmounted(() => {

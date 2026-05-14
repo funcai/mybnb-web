@@ -1,21 +1,38 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 
 import SearchBar from '../components/SearchBar.vue'
 import DetectionBox from '../components/DetectionBox.vue'
+import { createSearch as defaultCreateSearch } from '../services/api'
+import { createMockCreateSearch, resolveMockModeFromQuery } from '../services/mockSearch'
+import { buildSearchRoute } from '../router/searchRoute'
 
 const router = useRouter()
 const route = useRoute()
+const isCreatingSearch = ref(false)
 
-const handleSearch = (query: string) => {
+const mockMode =
+  typeof window !== 'undefined' ? resolveMockModeFromQuery(window.location.search) : null
+const createSearch = mockMode ? createMockCreateSearch() : defaultCreateSearch
+
+const handleSearch = async (query: string) => {
   const trimmed = query.trim()
   if (!trimmed) return
+  isCreatingSearch.value = true
   // Preserve `mock` (and any other) query params from the home URL.
   const passthrough: Record<string, string> = {}
   for (const [key, value] of Object.entries(route.query)) {
     if (typeof value === 'string') passthrough[key] = value
   }
-  router.push({ name: 'search', query: { ...passthrough, q: trimmed } })
+  try {
+    const requestId = await createSearch(trimmed)
+    router.push(buildSearchRoute(requestId, trimmed, passthrough))
+  } catch (error) {
+    console.error('Failed to create search:', error)
+  } finally {
+    isCreatingSearch.value = false
+  }
 }
 </script>
 
@@ -57,7 +74,7 @@ const handleSearch = (query: string) => {
             </p>
 
             <div class="mt-8 sm:mt-10">
-              <SearchBar @search="handleSearch" />
+              <SearchBar :isLoading="isCreatingSearch" @search="handleSearch" />
             </div>
           </div>
         </div>

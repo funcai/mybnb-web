@@ -76,10 +76,12 @@ type MockOptions = {
   streamStepMs?: number
 }
 
-export const createMockStartSearch = (options: MockOptions = {}) => {
+export const createMockCreateSearch = () => async (): Promise<string> => 'mock-request'
+
+export const createMockSubscribeToSearch = (options: MockOptions = {}) => {
   const { mode = 'results', delayMs = 600, streamStepMs = 350 } = options
 
-  return async (_query: string, handlers: SearchHandlers): Promise<() => void> => {
+  return async (_requestId: string, handlers: SearchHandlers): Promise<() => void> => {
     let cancelled = false
     const timeouts: ReturnType<typeof setTimeout>[] = []
 
