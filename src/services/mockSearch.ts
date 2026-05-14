@@ -106,6 +106,44 @@ export const createMockSubscribeToSearch = (options: MockOptions = {}) => {
       50,
     )
 
+    // Emit frequent, fluctuating progress updates so the progress display can
+    // be visually inspected. `found` grows steadily, `investigating` pulses up
+    // and down as the worker pulls listings off its queue.
+    const progressIntervalMs = 180
+    const baseDelayMs = delayMs
+    const finalProperties = mode === 'empty' ? [] : sampleProperties
+    const targetFound = mode === 'loading' ? 84 : Math.max(finalProperties.length * 6, 24)
+    const progressTicks = mode === 'loading' ? 120 : 10
+
+    let returnedSoFar = 0
+    for (let tickIndex = 1; tickIndex <= progressTicks; tickIndex += 1) {
+      const linearProgress = tickIndex / progressTicks
+      const foundCount = Math.round(targetFound * Math.min(1, linearProgress * 1.2))
+      // Investigating count oscillates to mimic concurrent workers.
+      const investigating = Math.max(
+        0,
+        Math.round(6 + 4 * Math.sin(tickIndex / 2.2) + (linearProgress < 0.9 ? 2 : -4)),
+      )
+      const matched =
+        mode === 'loading'
+          ? Math.min(foundCount, Math.round(linearProgress * 12))
+          : Math.min(finalProperties.length, returnedSoFar)
+      schedule(
+        () => {
+          handlers.onRequest?.({
+            requestId: 'mock-request',
+            request: { status: 'running' },
+            state: {
+              foundApartments: foundCount,
+              returnedApartmentsToFrontend: matched,
+              requestedApartmentsForInvestigation: investigating,
+            },
+          })
+        },
+        baseDelayMs + tickIndex * progressIntervalMs,
+      )
+    }
+
     if (mode === 'loading') {
       // Never completes — useful for previewing the loading state.
       return () => {
@@ -114,20 +152,19 @@ export const createMockSubscribeToSearch = (options: MockOptions = {}) => {
       }
     }
 
-    const finalProperties = mode === 'empty' ? [] : sampleProperties
-
     // Stream properties in one by one to mimic a live search.
     finalProperties.forEach((_, i) => {
       schedule(
         () => {
+          returnedSoFar = i + 1
           handlers.onUpdate?.(finalProperties.slice(0, i + 1))
           handlers.onRequest?.({
             requestId: 'mock-request',
             request: { status: 'running' },
             state: {
-              foundApartments: finalProperties.length,
+              foundApartments: targetFound,
               returnedApartmentsToFrontend: i + 1,
-              requestedApartmentsForInvestigation: finalProperties.length,
+              requestedApartmentsForInvestigation: Math.max(0, finalProperties.length - (i + 1)),
             },
           })
         },

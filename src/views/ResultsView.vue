@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 
 import PropertyList from '../components/PropertyList.vue'
 import SearchBar from '../components/SearchBar.vue'
+import SearchProgressDisplay from '../components/SearchProgressDisplay.vue'
 import { createSearch as defaultCreateSearch } from '../services/api'
 import {
   createMockCreateSearch,
@@ -131,26 +132,6 @@ const markers = computed<MapMarker[]>(() =>
   })),
 )
 
-const pluralize = (count: number, singular: string, plural = `${singular}s`): string =>
-  `${count} ${count === 1 ? singular : plural}`
-
-const progressText = computed(() => {
-  const found = searchProgress.value.foundApartments
-  if (found <= 0) {
-    return ''
-  }
-  const parts = [`${pluralize(found, 'potential apartment')} found`]
-  const returned = searchProgress.value.returnedApartmentsToFrontend
-  if (returned > 0) {
-    parts.push(`${pluralize(returned, 'result')} ready`)
-  }
-  const investigating = searchProgress.value.requestedApartmentsForInvestigation
-  if (investigating > 0) {
-    parts.push(`${pluralize(investigating, 'apartment')} being checked`)
-  }
-  return parts.join(' | ')
-})
-
 const hoveredId = ref<string | null>(null)
 const setHovered = (id: string | null) => {
   hoveredId.value = id
@@ -210,23 +191,14 @@ const onMarkerSelect = (id: string) => {
           class="sticky top-0 z-10 border-b border-[#e6e0d6] bg-[#f7f3ec]/95 px-4 py-4 backdrop-blur-sm sm:px-6 sm:py-6"
         >
           <SearchBar :isLoading="isLoading" :initialQuery="currentQuery" @search="onSubmit" />
-          <div class="mt-1 min-h-[1.25rem] sm:mt-3">
-            <transition name="loading-fade" mode="out-in">
-              <span
-                v-if="isLoading"
-                :key="progressText || loadingText"
-                class="block font-serif text-base italic text-[#8b6f47]"
-              >
-                {{ progressText || loadingText }}
-              </span>
-              <span
-                v-else-if="hasSearched"
-                key="result-count"
-                class="block text-[11px] uppercase tracking-[0.32em] text-[#8a8278]"
-              >
-                {{ properties.length }} properties found
-              </span>
-            </transition>
+          <div class="mt-3 sm:mt-4">
+            <SearchProgressDisplay
+              :isLoading="isLoading"
+              :hasSearched="hasSearched"
+              :progress="searchProgress"
+              :loadingText="loadingText"
+              :resultsCount="properties.length"
+            />
           </div>
           <div v-if="mlQuestions.length > 0" class="mt-4 flex flex-wrap gap-2">
             <label
@@ -308,20 +280,3 @@ const onMarkerSelect = (id: string) => {
     </button>
   </div>
 </template>
-
-<style scoped>
-.loading-fade-enter-active,
-.loading-fade-leave-active {
-  transition:
-    opacity 0.35s ease,
-    transform 0.35s ease;
-}
-.loading-fade-enter-from {
-  opacity: 0;
-  transform: translateY(4px);
-}
-.loading-fade-leave-to {
-  opacity: 0;
-  transform: translateY(-4px);
-}
-</style>
