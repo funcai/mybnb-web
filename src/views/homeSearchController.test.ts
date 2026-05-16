@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import type { SearchHandlers } from '../services/api'
-import { createHomeSearchController, propertyMatchesEnabledQuestions } from './homeSearchController'
+import {
+  createHomeSearchController,
+  mergePropertiesById,
+  propertyMatchesEnabledQuestions,
+} from './homeSearchController'
 
 const property = {
   id: 'apt-1',
@@ -102,6 +106,32 @@ describe('home search controller', () => {
 
     expect(cleanups[0]).toHaveBeenCalledTimes(1)
     expect(cleanups[1]).not.toHaveBeenCalled()
+  })
+
+  it('merges chunked result updates by property id', async () => {
+    let handlers: SearchHandlers | undefined
+    const subscribeToSearch = vi.fn(async (_requestId, nextHandlers) => {
+      handlers = nextHandlers
+      return vi.fn()
+    })
+    const controller = createHomeSearchController(subscribeToSearch)
+
+    await controller.connectToSearch('req-1')
+    handlers?.onUpdate?.([{ ...property, id: 'apt-1', title: 'First title' }])
+    handlers?.onUpdate?.([
+      { ...property, id: 'apt-2', title: 'Second title' },
+      { ...property, id: 'apt-1', title: 'Updated title' },
+    ])
+
+    expect(controller.properties.value.map((nextProperty) => nextProperty.id)).toEqual([
+      'apt-1',
+      'apt-2',
+    ])
+    expect(controller.properties.value[0]?.title).toBe('Updated title')
+  })
+
+  it('mergePropertiesById keeps existing results when update chunk is empty', () => {
+    expect(mergePropertiesById([property], [])).toEqual([property])
   })
 
   it('stops loading when the stream errors', async () => {

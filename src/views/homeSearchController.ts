@@ -93,6 +93,17 @@ export const propertyMatchesEnabledQuestions = (
   return true
 }
 
+export const mergePropertiesById = (current: Property[], updates: Property[]): Property[] => {
+  if (updates.length === 0) {
+    return current
+  }
+  const merged = new Map(current.map((property) => [property.id, property]))
+  for (const property of updates) {
+    merged.set(property.id, property)
+  }
+  return Array.from(merged.values())
+}
+
 export const createHomeSearchController = (
   subscribeToSearch: SubscribeToSearchFn = defaultSubscribeToSearch,
 ): HomeSearchController => {
@@ -211,7 +222,7 @@ export const createHomeSearchController = (
           if (searchToken !== activeSearchToken) {
             return
           }
-          allProperties.value = nextProperties
+          allProperties.value = mergePropertiesById(allProperties.value, nextProperties)
           if (closeAfterNextUpdateToken === searchToken) {
             closeAfterNextUpdateToken = null
             closeActiveSearch()
