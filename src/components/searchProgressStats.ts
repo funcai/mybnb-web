@@ -13,12 +13,17 @@ export type SearchProgressStat = {
 export const searchProgressTargetValues = (
   progress: SearchProgress,
   resultsCount: number,
-): Record<SearchProgressStatKey, number> => ({
-  found: progress.foundApartments,
-  queued: progress.requestedApartmentsForInvestigation,
-  analyzed: progress.returnedApartmentsToFrontend,
-  matched: resultsCount,
-})
+): Record<SearchProgressStatKey, number> => {
+  const analyzed = progress.returnedApartmentsToFrontend
+  const queuedForReview = Math.max(0, progress.requestedApartmentsForInvestigation - analyzed)
+
+  return {
+    found: progress.foundApartments,
+    queued: queuedForReview,
+    analyzed,
+    matched: resultsCount,
+  }
+}
 
 export const searchProgressStats = (
   displayed: Record<SearchProgressStatKey, number>,
@@ -55,11 +60,16 @@ export const searchProgressStats = (
   },
 ]
 
-export const searchProgressPercent = (
-  targetValues: Pick<Record<SearchProgressStatKey, number>, 'found'>,
-  resultsCount: number,
+export const searchReviewProgressPercent = (
+  progress: Pick<
+    SearchProgress,
+    'requestedApartmentsForInvestigation' | 'returnedApartmentsToFrontend'
+  >,
 ): number => {
-  const found = targetValues.found
-  if (found <= 0) return 0
-  return Math.min(100, Math.round((resultsCount / found) * 100))
+  const totalQueuedForReview = progress.requestedApartmentsForInvestigation
+  if (totalQueuedForReview <= 0) return 0
+  return Math.min(
+    100,
+    Math.round((progress.returnedApartmentsToFrontend / totalQueuedForReview) * 100),
+  )
 }

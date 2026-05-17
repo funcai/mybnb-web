@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest'
 
 import {
-  searchProgressPercent,
   searchProgressStats,
   searchProgressTargetValues,
+  searchReviewProgressPercent,
   type SearchProgressStatKey,
 } from './searchProgressStats'
 
 describe('search progress stats', () => {
-  it('uses visible results as matches and backend returned results as analyzed', () => {
+  it('uses visible results as matches and subtracts analyzed apartments from review queue', () => {
     const targets = searchProgressTargetValues(
       {
         foundApartments: 35,
@@ -20,7 +20,7 @@ describe('search progress stats', () => {
 
     expect(targets).toEqual({
       found: 35,
-      queued: 27,
+      queued: 0,
       analyzed: 27,
       matched: 7,
     })
@@ -30,15 +30,60 @@ describe('search progress stats', () => {
       searchProgressStats(displayed, targets, false).map(({ label, value }) => ({ label, value })),
     ).toEqual([
       { label: 'Candidates', value: 35 },
-      { label: 'Queued for review', value: 27 },
+      { label: 'Queued for review', value: 0 },
       { label: 'Analyzed', value: 27 },
       { label: 'Matches', value: 7 },
     ])
   })
 
-  it('bases progress percentage on visible matches', () => {
-    expect(searchProgressPercent({ found: 35 }, 7)).toBe(20)
-    expect(searchProgressPercent({ found: 0 }, 7)).toBe(0)
-    expect(searchProgressPercent({ found: 4 }, 9)).toBe(100)
+  it('keeps queued for review as remaining work while analysis is in progress', () => {
+    expect(
+      searchProgressTargetValues(
+        {
+          foundApartments: 35,
+          requestedApartmentsForInvestigation: 27,
+          returnedApartmentsToFrontend: 12,
+        },
+        4,
+      ),
+    ).toEqual({
+      found: 35,
+      queued: 15,
+      analyzed: 12,
+      matched: 4,
+    })
+  })
+
+  it('bases progress percentage on analyzed over total queued for review', () => {
+    expect(
+      searchReviewProgressPercent({
+        requestedApartmentsForInvestigation: 27,
+        returnedApartmentsToFrontend: 0,
+      }),
+    ).toBe(0)
+    expect(
+      searchReviewProgressPercent({
+        requestedApartmentsForInvestigation: 27,
+        returnedApartmentsToFrontend: 12,
+      }),
+    ).toBe(44)
+    expect(
+      searchReviewProgressPercent({
+        requestedApartmentsForInvestigation: 27,
+        returnedApartmentsToFrontend: 27,
+      }),
+    ).toBe(100)
+    expect(
+      searchReviewProgressPercent({
+        requestedApartmentsForInvestigation: 0,
+        returnedApartmentsToFrontend: 7,
+      }),
+    ).toBe(0)
+    expect(
+      searchReviewProgressPercent({
+        requestedApartmentsForInvestigation: 4,
+        returnedApartmentsToFrontend: 9,
+      }),
+    ).toBe(100)
   })
 })

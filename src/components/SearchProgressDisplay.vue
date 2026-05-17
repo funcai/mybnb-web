@@ -3,9 +3,9 @@ import { computed, onUnmounted, ref, watch } from 'vue'
 
 import type { SearchProgress } from '../services/api'
 import {
-  searchProgressPercent,
   searchProgressStats,
   searchProgressTargetValues,
+  searchReviewProgressPercent,
   type SearchProgressStatKey,
 } from './searchProgressStats'
 
@@ -84,9 +84,7 @@ onUnmounted(() => {
   })
 })
 
-const progressPercent = computed(() =>
-  searchProgressPercent(targetValues.value, props.resultsCount),
-)
+const progressPercent = computed(() => searchReviewProgressPercent(props.progress))
 
 const stats = computed(() =>
   searchProgressStats(displayed.value, targetValues.value, props.isLoading),
@@ -100,28 +98,28 @@ const showProgressUi = computed(
 <template>
   <div v-if="showProgressUi" class="flex flex-col gap-2">
     <!-- Stat row -->
-    <div class="flex items-stretch gap-1.5 sm:gap-3">
+    <div class="grid grid-cols-2 items-stretch gap-1.5 sm:grid-cols-4 sm:gap-3">
       <div
         v-for="stat in stats"
         :key="stat.key"
-        class="flex min-w-0 flex-1 items-center justify-between gap-1.5 border px-2 py-1.5 transition-colors sm:gap-2 sm:px-3 sm:py-2"
+        class="flex min-w-0 flex-col items-start justify-between gap-1 border px-2 py-1.5 transition-colors sm:flex-row sm:items-center sm:gap-2 sm:px-3 sm:py-2"
         :class="stat.accent ? 'border-[#8b6f47]/40 bg-[#8b6f47]/5' : 'border-[#e6e0d6] bg-white/60'"
       >
-        <div class="flex min-w-0 items-center gap-1.5">
+        <div class="flex min-w-0 max-w-full items-center gap-1.5">
           <span
             v-if="stat.pulse"
             aria-hidden="true"
             class="mybnb-progress-dot h-1.5 w-1.5 shrink-0 rounded-full bg-[#8b6f47]"
           ></span>
           <span
-            class="truncate text-[9px] font-medium uppercase leading-none tracking-[0.18em] sm:text-[10px] sm:tracking-[0.28em]"
+            class="min-w-0 break-words text-[10px] font-medium uppercase leading-tight tracking-[0.18em] sm:truncate sm:leading-none sm:tracking-[0.28em]"
             :class="stat.accent ? 'text-[#6f5836]' : 'text-[#8a8278]'"
           >
             {{ stat.label }}
           </span>
         </div>
         <span
-          class="font-serif text-lg font-medium leading-none tabular-nums tracking-tight sm:text-xl"
+          class="self-end font-serif text-lg font-medium leading-none tabular-nums tracking-tight sm:self-auto sm:text-xl"
           :class="stat.accent ? 'text-[#6f5836]' : 'text-[#1c1a17]'"
         >
           {{ stat.value }}
@@ -129,7 +127,7 @@ const showProgressUi = computed(
       </div>
     </div>
 
-    <!-- Slim progress bar: matched / found -->
+    <!-- Slim progress bar: analyzed / queued for review -->
     <div
       v-if="isLoading || (hasSearched && targetValues.found > 0)"
       class="relative h-[3px] w-full overflow-hidden bg-[#e6e0d6]"
