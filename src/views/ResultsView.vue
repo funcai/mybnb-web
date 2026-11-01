@@ -32,6 +32,7 @@ const createSearch = mockMode ? createMockCreateSearch() : defaultCreateSearch
 
 const {
   properties,
+  unknownProperties,
   mlQuestions,
   enabledQuestionIds,
   isLoading,
@@ -229,6 +230,11 @@ const onMarkerSelect = (id: string) => {
             :highlightedId="hoveredId"
             @hover="setHovered"
           />
+          <section v-if="unknownProperties.length > 0" class="mt-8" aria-label="Listings with unknown image results">
+            <h2 class="px-4 font-serif text-xl sm:px-0">Could not evaluate {{ unknownProperties.length }} listings</h2>
+            <p class="px-4 py-3 text-sm text-[#6f5836] sm:px-0">Their image results are unknown. These listings have not passed your selected questions.</p>
+            <PropertyList :properties="unknownProperties" />
+          </section>
         </div>
       </section>
 
