@@ -32,6 +32,7 @@ export type MlQuestion = {
 
 type HomeSearchController = {
   properties: Readonly<Ref<Property[]>>
+  unknownProperties: Readonly<Ref<Property[]>>
   mlQuestions: Ref<MlQuestion[]>
   enabledQuestionIds: Ref<Set<string>>
   isLoading: Ref<boolean>
@@ -83,10 +84,11 @@ export const propertyMatchesEnabledQuestions = (
   enabledQuestionIds: Set<string>,
 ): boolean => {
   for (const questionId of enabledQuestionIds) {
+    if (property.questionScores.some((result) => result.questionId === questionId && result.status === 'unknown')) return false
     const score = property.questionScores.find(
       (questionScore) => questionScore.questionId === questionId,
     )?.score
-    if (typeof score !== 'number' || score < 0.5) {
+    if (typeof score !== 'number' || !Number.isFinite(score) || score < 0.5) {
       return false
     }
   }
@@ -115,6 +117,9 @@ export const createHomeSearchController = (
       propertyMatchesEnabledQuestions(property, enabledQuestionIds.value),
     ),
   )
+  const unknownProperties = computed(() => allProperties.value.filter((property) =>
+    property.questionScores.some((result) => result.status === 'unknown' && enabledQuestionIds.value.has(result.questionId)),
+  ))
   const isLoading = ref(false)
   const hasSearched = ref(false)
   const loadingText = ref('Starting your apartment search...')
@@ -264,6 +269,7 @@ export const createHomeSearchController = (
 
   return {
     properties,
+    unknownProperties,
     mlQuestions,
     enabledQuestionIds,
     isLoading,

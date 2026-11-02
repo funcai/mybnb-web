@@ -112,10 +112,16 @@ const mapQuestionScore = (
   if (!questionId) {
     return null
   }
+  const validScore = typeof result.score === 'number' && Number.isFinite(result.score) && result.score >= 0 && result.score <= 1
+  const invalid = result.status !== 'unknown' && !validScore && (result.score != null || result.status === 'scored')
   return {
     questionId,
     question: questionMap.get(questionId) ?? questionId,
-    score: typeof result.score === 'number' ? result.score : 0,
+    score: result.status !== 'unknown' && validScore ? result.score as number : undefined,
+    ...(invalid ? { status: 'unknown' as const, errorCode: 'invalid_score' } : {
+      ...(result.status ? { status: result.status } : {}),
+      ...(result.errorCode ? { errorCode: result.errorCode } : {}),
+    }),
   }
 }
 
@@ -187,7 +193,7 @@ export const mapMatchingApartmentsToProperties = (
         (entry.nonFilterableQuestionResults ?? [])
           .map((result) => mapQuestionScore(result, questionMap))
           .filter((result): result is PropertyQuestionScore => result !== null)
-          .map((result) => [result.questionId, result.score] as const),
+          .map((result) => [result.questionId, result] as const),
       )
       const property: Property = {
         id,
@@ -203,7 +209,9 @@ export const mapMatchingApartmentsToProperties = (
             ? Array.from(questionMap.entries()).map(([questionId, question]) => ({
                 questionId,
                 question,
-                score: resultScores.get(questionId),
+                score: resultScores.get(questionId)?.score,
+                ...(resultScores.get(questionId)?.status ? { status: resultScores.get(questionId)!.status } : {}),
+                ...(resultScores.get(questionId)?.errorCode ? { errorCode: resultScores.get(questionId)!.errorCode } : {}),
               }))
             : (entry.nonFilterableQuestionResults ?? [])
                 .map((result) => mapQuestionScore(result, questionMap))

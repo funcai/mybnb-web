@@ -60,7 +60,9 @@ export interface AgentApartment {
 
 export interface AgentQuestionResult {
   nonFilterableQuestionId?: string
-  score?: number
+  score?: number | null
+  status?: 'scored' | 'pending' | 'unknown'
+  errorCode?: string
 }
 
 export interface AgentMatchingApartment {

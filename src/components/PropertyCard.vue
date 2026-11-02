@@ -2,6 +2,7 @@
 import { Building2, ExternalLink } from 'lucide-vue-next'
 
 import type { Property } from '../types/property'
+import { formatQuestionScore } from '../services/questionScores'
 
 withDefaults(
   defineProps<{
@@ -15,8 +16,6 @@ const emit = defineEmits<{
   hover: [id: string | null]
 }>()
 
-const formatScore = (score?: number): string =>
-  typeof score === 'number' ? `${Math.round(score * 100)}%` : 'Pending'
 </script>
 
 <template>
@@ -101,7 +100,7 @@ const formatScore = (score?: number): string =>
             class="border border-[#8b6f47]/30 bg-[#8b6f47]/5 px-2 py-0.5 text-[11px] text-[#6f5836]"
           >
             {{ questionScore.question }}:
-            <span class="font-medium">{{ formatScore(questionScore.score) }}</span>
+            <span class="font-medium">{{ formatQuestionScore(questionScore) }}</span>
           </span>
         </div>
       </div>

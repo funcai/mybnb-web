@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "request": {
+    "id": "fixture-request",
+    "status": "completed",
+    "nonFilterableQuestions": [
+      {
+        "id": "q-visible",
+        "question": "Visible fixture feature?"
+      }
+    ]
+  },
+  "rawMatchingApartments": [
+    {
+      "apartmentId": "apt-unknown",
+      "nonFilterableQuestionResults": [
+        {
+          "nonFilterableQuestionId": "q-visible",
+          "status": "unknown",
+          "errorCode": "missing_image_evidence"
+        }
+      ]
+    },
+    {
+      "apartmentId": "apt-match",
+      "nonFilterableQuestionResults": [
+        {
+          "nonFilterableQuestionId": "q-visible",
+          "score": 1
+        }
+      ]
+    },
+    {
+      "apartmentId": "apt-negative",
+      "nonFilterableQuestionResults": [
+        {
+          "nonFilterableQuestionId": "q-visible",
+          "score": 0
+        }
+      ]
+    }
+  ],
+  "apartments": [
+    {
+      "id": "apt-unknown",
+      "provider": "fixture",
+      "sourceUrl": "https://example.com/unknown",
+      "ogTitle": "Fixture unknown"
+    },
+    {
+      "id": "apt-match",
+      "provider": "fixture",
+      "sourceUrl": "https://example.com/match",
+      "ogTitle": "Fixture match"
+    },
+    {
+      "id": "apt-negative",
+      "provider": "fixture",
+      "sourceUrl": "https://example.com/negative",
+      "ogTitle": "Fixture negative"
+    }
+  ]
+}

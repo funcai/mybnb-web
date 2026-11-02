@@ -8,6 +8,8 @@ export interface PropertyQuestionScore {
   questionId: string
   question: string
   score?: number
+  status?: 'scored' | 'pending' | 'unknown'
+  errorCode?: string
 }
 
 export interface PropertyCoordinates {
