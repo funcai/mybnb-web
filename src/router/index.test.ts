@@ -24,7 +24,7 @@ describe('router', () => {
   })
 })
 
-it('keeps the optional listing keyword empty when only a visual criterion was selected', () => {
-  const route = buildSearchRoute('fresh-id', '', { criterion: 'is a refrigerator visible in the apartment photos?' })
-  expect(route).toMatchObject({ query: { q: '', criterion: 'is a refrigerator visible in the apartment photos?' } })
+it('preserves an unseen free-text question in the saved-results route', () => {
+  const question = '  Is a Violet HAMMOCK hanging outside?  '
+  expect(buildSearchRoute('fresh-id', question)).toMatchObject({ query: { q: question } })
 })

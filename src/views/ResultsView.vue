@@ -5,7 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import PropertyList from '../components/PropertyList.vue'
 import SearchBar from '../components/SearchBar.vue'
 import SearchProgressDisplay from '../components/SearchProgressDisplay.vue'
-import { createSearch as defaultCreateSearch, fetchSearchCapabilities, type SearchCapabilities } from '../services/api'
+import { createSearch as defaultCreateSearch } from '../services/api'
 import {
   createMockCreateSearch,
   createMockSubscribeToSearch,
@@ -67,23 +67,20 @@ const connectToRouteRequest = () => {
   void connectToSearch(requestId)
 }
 
-const capabilities = ref<SearchCapabilities | null>(null)
 const createError = ref('')
 const isCreatingSearch = ref(false)
-const currentCriterion = computed(() => typeof route.query.criterion === 'string' ? route.query.criterion : '')
-const onSubmit = async (query: string, criterion?: string) => {
+const onSubmit = async (query: string) => {
   const trimmed = query.trim()
-  if ((!trimmed && !criterion) || isCreatingSearch.value) return
+  if (!trimmed || isCreatingSearch.value) return
   createError.value = ''
   isCreatingSearch.value = true
   const passthrough: Record<string, string> = {}
   for (const [key, value] of Object.entries(route.query)) {
-    if (typeof value === 'string' && key !== 'q') passthrough[key] = value
+    if (typeof value === 'string' && key !== 'q' && key !== 'criterion') passthrough[key] = value
   }
   try {
-    const requestId = mockMode ? await createSearch(trimmed) : await defaultCreateSearch(trimmed, { criterion })
-    if (criterion) passthrough.criterion = criterion
-    router.replace(buildSearchRoute(requestId, trimmed, passthrough))
+    const requestId = await createSearch(query)
+    router.replace(buildSearchRoute(requestId, query, passthrough))
   } catch (error) {
     createError.value = error instanceof Error ? error.message : 'Search is temporarily unavailable.'
   } finally { isCreatingSearch.value = false }
@@ -92,7 +89,7 @@ const onSubmit = async (query: string, criterion?: string) => {
 const goHome = () => {
   const passthrough: Record<string, string> = {}
   for (const [key, value] of Object.entries(route.query)) {
-    if (typeof value === 'string' && key !== 'q') passthrough[key] = value
+    if (typeof value === 'string' && key !== 'q' && key !== 'criterion') passthrough[key] = value
   }
   router.push({ name: 'home', query: passthrough })
 }
@@ -104,8 +101,7 @@ watch(
   },
 )
 
-onMounted(async () => {
-  if (!mockMode) capabilities.value = await fetchSearchCapabilities()
+onMounted(() => {
   connectToRouteRequest()
 })
 
@@ -201,7 +197,7 @@ const onMarkerSelect = (id: string) => {
         <div
           class="sticky top-0 z-10 border-b border-[#e6e0d6] bg-[#f7f3ec]/95 px-4 py-4 backdrop-blur-sm sm:px-6 sm:py-6"
         >
-          <SearchBar :capabilities="capabilities" :initial-criterion="currentCriterion" :isLoading="isLoading || isCreatingSearch" :initialQuery="currentQuery" @search="onSubmit" />
+          <SearchBar :isLoading="isLoading || isCreatingSearch" :initialQuery="currentQuery" @search="onSubmit" />
           <div class="mt-3 sm:mt-4">
             <SearchProgressDisplay
               :isLoading="isLoading || isCreatingSearch"

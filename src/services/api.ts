@@ -263,13 +263,12 @@ export const bootBackend = async (env: EnvLike = import.meta.env): Promise<void>
 
 export const createSearch = async (
   searchQuery: string,
-  options: { env?: EnvLike; criterion?: string } = {},
+  options: { env?: EnvLike } = {},
 ): Promise<string> => {
   const env = options.env ?? import.meta.env
   const baseUrl = resolveAgentBaseUrl(env)
   const { requestId } = await postJson<{ requestId: string }>(`${baseUrl}/requests`, {
     searchQuery,
-    ...(options.criterion ? { criterion: options.criterion } : {}),
   })
   return requestId
 }
@@ -318,17 +317,4 @@ export const subscribeToSearch = (
   }
 
   return cleanup
-}
-
-export type SearchCapabilities = { mode: 'catalog'; open: boolean; questions: string[]; maxCandidates: number; deadline: string }
-export const fetchSearchCapabilities = async (env: EnvLike = import.meta.env): Promise<SearchCapabilities | null> => {
-  try {
-    const response = await fetch(`${resolveAgentBaseUrl(env)}/search-capabilities`)
-    if (!response.ok) return null
-    const data = await response.json()
-    if (data.mode !== 'catalog' || typeof data.open !== 'boolean' || !Array.isArray(data.questions) ||
-      data.questions.length !== 14 || !data.questions.every((q: unknown) => typeof q === 'string' && q.length < 512) ||
-      !Number.isInteger(data.maxCandidates) || data.maxCandidates < 1 || data.maxCandidates > 5) return null
-    return data as SearchCapabilities
-  } catch { return null }
 }

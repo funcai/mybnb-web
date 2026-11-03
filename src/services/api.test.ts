@@ -316,13 +316,14 @@ describe('api service', () => {
   })
 })
 
-describe('bounded catalog search contract', () => {
+describe('free-text search contract', () => {
   afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals() })
-  it('submits the selected visual criterion separately from the listing keyword', async () => {
+  it('submits unseen user text exactly through the original searchQuery field', async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ requestId: 'new-id' }) })
     vi.stubGlobal('fetch', fetchMock)
-    expect(await createSearch('Berlin', { env: {}, criterion: 'fixture criterion' })).toBe('new-id')
-    expect(JSON.parse(fetchMock.mock.calls[0]![1].body)).toEqual({ searchQuery: 'Berlin', criterion: 'fixture criterion' })
+    const question = '  Is a Violet HAMMOCK hanging outside?  '
+    expect(await createSearch(question, { env: {} })).toBe('new-id')
+    expect(JSON.parse(fetchMock.mock.calls[0]![1].body)).toEqual({ searchQuery: question })
   })
   it('shows safe typed admission failures and conceals arbitrary backend errors', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, json: async () => ({ error: { code: 'preview_session_closed', message: 'The preview is paused.' } }) }))
