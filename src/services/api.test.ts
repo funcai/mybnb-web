@@ -315,3 +315,29 @@ describe('api service', () => {
     expect(source.closed).toBe(true)
   })
 })
+
+describe('bounded catalog search contract', () => {
+  afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals() })
+  it('submits the selected visual criterion separately from the listing keyword', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ requestId: 'new-id' }) })
+    vi.stubGlobal('fetch', fetchMock)
+    expect(await createSearch('Berlin', { env: {}, criterion: 'fixture criterion' })).toBe('new-id')
+    expect(JSON.parse(fetchMock.mock.calls[0]![1].body)).toEqual({ searchQuery: 'Berlin', criterion: 'fixture criterion' })
+  })
+  it('shows safe typed admission failures and conceals arbitrary backend errors', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, json: async () => ({ error: { code: 'preview_session_closed', message: 'The preview is paused.' } }) }))
+    await expect(createSearch('fixture')).rejects.toThrow('The preview is paused.')
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, json: async () => ({ error: { code: 'private', message: 'fixture-secret' } }) }))
+    await expect(createSearch('fixture')).rejects.toThrow('Search is temporarily unavailable.')
+  })
+  it('closes a stream on an explicit terminal error without treating it as a numeric result', () => {
+    const source = new FakeEventSource()
+    const onError = vi.fn()
+    const onUpdate = vi.fn()
+    subscribeToSearch('fresh-id', { onError, onUpdate }, { env: {}, eventSourceFactory: () => source })
+    source.emit('error', { code: 'result_unavailable' })
+    expect(onError).toHaveBeenCalledOnce()
+    expect(onUpdate).not.toHaveBeenCalled()
+    expect(source.closed).toBe(true)
+  })
+})

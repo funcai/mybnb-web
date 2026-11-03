@@ -141,7 +141,6 @@ describe('home search controller', () => {
       handlers = nextHandlers
       return cleanup
     })
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     const controller = createHomeSearchController(subscribeToSearch)
 
@@ -150,7 +149,7 @@ describe('home search controller', () => {
 
     expect(controller.isLoading.value).toBe(false)
     expect(cleanup).toHaveBeenCalledTimes(1)
-    expect(consoleError).toHaveBeenCalled()
+    expect(controller.errorMessage.value).toBe('boom')
   })
 
   it('enables ml question filters by default and hides apartments below threshold', async () => {
@@ -220,4 +219,16 @@ describe('home search controller', () => {
       ),
     ).toBe(false)
   })
+})
+
+it('surfaces a terminal stream failure and stops processing', async () => {
+  let handlers: SearchHandlers | undefined
+  const cleanup = vi.fn()
+  const controller = createHomeSearchController((_id, next) => { handlers = next; return cleanup })
+  await controller.connectToSearch('fresh-id')
+  handlers?.onError?.(new Error('The search could not finish.'))
+  expect(controller.errorMessage.value).toBe('The search could not finish.')
+  expect(controller.isLoading.value).toBe(false)
+  expect(cleanup).toHaveBeenCalledOnce()
+  controller.dispose()
 })

@@ -5,7 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import PropertyList from '../components/PropertyList.vue'
 import SearchBar from '../components/SearchBar.vue'
 import SearchProgressDisplay from '../components/SearchProgressDisplay.vue'
-import { createSearch as defaultCreateSearch } from '../services/api'
+import { createSearch as defaultCreateSearch, fetchSearchCapabilities, type SearchCapabilities } from '../services/api'
 import {
   createMockCreateSearch,
   createMockSubscribeToSearch,
@@ -32,6 +32,7 @@ const createSearch = mockMode ? createMockCreateSearch() : defaultCreateSearch
 
 const {
   properties,
+  errorMessage,
   unknownProperties,
   mlQuestions,
   enabledQuestionIds,
@@ -66,19 +67,26 @@ const connectToRouteRequest = () => {
   void connectToSearch(requestId)
 }
 
-const onSubmit = async (query: string) => {
+const capabilities = ref<SearchCapabilities | null>(null)
+const createError = ref('')
+const isCreatingSearch = ref(false)
+const currentCriterion = computed(() => typeof route.query.criterion === 'string' ? route.query.criterion : '')
+const onSubmit = async (query: string, criterion?: string) => {
   const trimmed = query.trim()
-  if (!trimmed) return
+  if ((!trimmed && !criterion) || isCreatingSearch.value) return
+  createError.value = ''
+  isCreatingSearch.value = true
   const passthrough: Record<string, string> = {}
   for (const [key, value] of Object.entries(route.query)) {
     if (typeof value === 'string' && key !== 'q') passthrough[key] = value
   }
   try {
-    const requestId = await createSearch(trimmed)
+    const requestId = mockMode ? await createSearch(trimmed) : await defaultCreateSearch(trimmed, { criterion })
+    if (criterion) passthrough.criterion = criterion
     router.replace(buildSearchRoute(requestId, trimmed, passthrough))
   } catch (error) {
-    console.error('Failed to create search:', error)
-  }
+    createError.value = error instanceof Error ? error.message : 'Search is temporarily unavailable.'
+  } finally { isCreatingSearch.value = false }
 }
 
 const goHome = () => {
@@ -96,7 +104,8 @@ watch(
   },
 )
 
-onMounted(() => {
+onMounted(async () => {
+  if (!mockMode) capabilities.value = await fetchSearchCapabilities()
   connectToRouteRequest()
 })
 
@@ -164,6 +173,7 @@ const onMarkerSelect = (id: string) => {
 
 <template>
   <div class="flex min-h-screen flex-col bg-[#f7f3ec] text-[#1c1a17] lg:h-screen">
+    <p v-if="createError || errorMessage" role="alert" class="p-4 text-sm text-red-800">{{ createError || errorMessage }}</p>
     <!-- Top brand bar -->
     <header class="shrink-0 border-b border-[#e6e0d6]">
       <div
@@ -191,10 +201,10 @@ const onMarkerSelect = (id: string) => {
         <div
           class="sticky top-0 z-10 border-b border-[#e6e0d6] bg-[#f7f3ec]/95 px-4 py-4 backdrop-blur-sm sm:px-6 sm:py-6"
         >
-          <SearchBar :isLoading="isLoading" :initialQuery="currentQuery" @search="onSubmit" />
+          <SearchBar :capabilities="capabilities" :initial-criterion="currentCriterion" :isLoading="isLoading || isCreatingSearch" :initialQuery="currentQuery" @search="onSubmit" />
           <div class="mt-3 sm:mt-4">
             <SearchProgressDisplay
-              :isLoading="isLoading"
+              :isLoading="isLoading || isCreatingSearch"
               :hasSearched="hasSearched"
               :progress="searchProgress"
               :loadingText="loadingText"
@@ -226,7 +236,7 @@ const onMarkerSelect = (id: string) => {
         <div class="flex-1 pb-6 sm:px-6 sm:pt-6">
           <PropertyList
             :properties="properties"
-            :isLoading="isLoading"
+            :isLoading="isLoading || isCreatingSearch"
             :highlightedId="hoveredId"
             @hover="setHovered"
           />

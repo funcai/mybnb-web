@@ -36,6 +36,7 @@ type HomeSearchController = {
   mlQuestions: Ref<MlQuestion[]>
   enabledQuestionIds: Ref<Set<string>>
   isLoading: Ref<boolean>
+  errorMessage: Ref<string>
   hasSearched: Ref<boolean>
   loadingText: Ref<string>
   searchProgress: Ref<SearchProgress>
@@ -121,6 +122,7 @@ export const createHomeSearchController = (
     property.questionScores.some((result) => result.status === 'unknown' && enabledQuestionIds.value.has(result.questionId)),
   ))
   const isLoading = ref(false)
+  const errorMessage = ref('')
   const hasSearched = ref(false)
   const loadingText = ref('Starting your apartment search...')
   const searchProgress = ref<SearchProgress>(normalizeSearchProgress())
@@ -211,6 +213,7 @@ export const createHomeSearchController = (
     enabledQuestionIds.value = new Set()
     locationHint.value = null
     searchProgress.value = normalizeSearchProgress()
+    errorMessage.value = ''
     hasSearched.value = true
     isLoading.value = true
     startLoadingTextAnimation()
@@ -237,7 +240,7 @@ export const createHomeSearchController = (
           if (searchToken !== activeSearchToken) {
             return
           }
-          console.error('Search failed:', error)
+          errorMessage.value = error.message
           finishSearch()
         },
       })
@@ -245,7 +248,7 @@ export const createHomeSearchController = (
       if (searchToken !== activeSearchToken) {
         return
       }
-      console.error('Search failed:', error)
+      errorMessage.value = error instanceof Error ? error.message : 'The search could not finish.'
       finishSearch()
     }
   }
@@ -273,6 +276,7 @@ export const createHomeSearchController = (
     mlQuestions,
     enabledQuestionIds,
     isLoading,
+    errorMessage,
     hasSearched,
     loadingText,
     searchProgress,

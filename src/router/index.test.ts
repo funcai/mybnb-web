@@ -23,3 +23,8 @@ describe('router', () => {
     expect(searchLegacyRouteName).not.toBe(searchRouteName)
   })
 })
+
+it('keeps the optional listing keyword empty when only a visual criterion was selected', () => {
+  const route = buildSearchRoute('fresh-id', '', { criterion: 'is a refrigerator visible in the apartment photos?' })
+  expect(route).toMatchObject({ query: { q: '', criterion: 'is a refrigerator visible in the apartment photos?' } })
+})
