@@ -241,7 +241,11 @@ const postJson = async <T>(url: string, body: unknown): Promise<T> => {
   })
 
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.status} ${response.statusText}`)
+    const payload = await response.json().catch(() => null)
+    const safeCodes = ['preview_session_closed', 'preview_busy_or_limit', 'unsupported_question', 'invalid_query', 'catalog_unavailable', 'catalog_invalid', 'request_not_saved', 'search_unavailable']
+    const message = safeCodes.includes(payload?.error?.code) && typeof payload?.error?.message === 'string'
+      ? payload.error.message.slice(0, 200) : 'Search is temporarily unavailable. Please try again later.'
+    throw new Error(message)
   }
 
   return (await response.json()) as T
@@ -259,12 +263,13 @@ export const bootBackend = async (env: EnvLike = import.meta.env): Promise<void>
 
 export const createSearch = async (
   searchQuery: string,
-  options: { env?: EnvLike } = {},
+  options: { env?: EnvLike; criterion?: string } = {},
 ): Promise<string> => {
   const env = options.env ?? import.meta.env
   const baseUrl = resolveAgentBaseUrl(env)
   const { requestId } = await postJson<{ requestId: string }>(`${baseUrl}/requests`, {
     searchQuery,
+    ...(options.criterion ? { criterion: options.criterion } : {}),
   })
   return requestId
 }
@@ -301,9 +306,29 @@ export const subscribeToSearch = (
     handlers.onUpdate?.(mapMatchingApartmentsToProperties(payload, questionMap))
   })
 
+  source.addEventListener('error', (event) => {
+    if (typeof event.data === 'string' && event.data) {
+      handlers.onError?.(new Error('The search could not finish. Saved results remain available.'))
+      cleanup()
+    }
+  })
+
   source.onerror = () => {
     handlers.onError?.(new Error(`SSE connection failed for request ${requestId}`))
   }
 
   return cleanup
+}
+
+export type SearchCapabilities = { mode: 'catalog'; open: boolean; questions: string[]; maxCandidates: number; deadline: string }
+export const fetchSearchCapabilities = async (env: EnvLike = import.meta.env): Promise<SearchCapabilities | null> => {
+  try {
+    const response = await fetch(`${resolveAgentBaseUrl(env)}/search-capabilities`)
+    if (!response.ok) return null
+    const data = await response.json()
+    if (data.mode !== 'catalog' || typeof data.open !== 'boolean' || !Array.isArray(data.questions) ||
+      data.questions.length !== 14 || !data.questions.every((q: unknown) => typeof q === 'string' && q.length < 512) ||
+      !Number.isInteger(data.maxCandidates) || data.maxCandidates < 1 || data.maxCandidates > 5) return null
+    return data as SearchCapabilities
+  } catch { return null }
 }

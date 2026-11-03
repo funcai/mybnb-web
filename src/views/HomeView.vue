@@ -1,24 +1,28 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 
 import SearchBar from '../components/SearchBar.vue'
 import DetectionBox from '../components/DetectionBox.vue'
-import { createSearch as defaultCreateSearch } from '../services/api'
+import { createSearch as defaultCreateSearch, fetchSearchCapabilities, type SearchCapabilities } from '../services/api'
 import { createMockCreateSearch, resolveMockModeFromQuery } from '../services/mockSearch'
 import { buildSearchRoute } from '../router/searchRoute'
 
 const router = useRouter()
 const route = useRoute()
 const isCreatingSearch = ref(false)
+const capabilities = ref<SearchCapabilities | null>(null)
+const searchError = ref('')
+onMounted(async () => { if (!mockMode) capabilities.value = await fetchSearchCapabilities() })
 
 const mockMode =
   typeof window !== 'undefined' ? resolveMockModeFromQuery(window.location.search) : null
 const createSearch = mockMode ? createMockCreateSearch() : defaultCreateSearch
 
-const handleSearch = async (query: string) => {
+const handleSearch = async (query: string, criterion?: string) => {
   const trimmed = query.trim()
-  if (!trimmed) return
+  if (!trimmed && !criterion) return
+  searchError.value = ''
   isCreatingSearch.value = true
   // Preserve `mock` (and any other) query params from the home URL.
   const passthrough: Record<string, string> = {}
@@ -26,10 +30,11 @@ const handleSearch = async (query: string) => {
     if (typeof value === 'string') passthrough[key] = value
   }
   try {
-    const requestId = await createSearch(trimmed)
+    const requestId = mockMode ? await createSearch(trimmed) : await defaultCreateSearch(trimmed, { criterion })
+    if (criterion) passthrough.criterion = criterion
     router.push(buildSearchRoute(requestId, trimmed, passthrough))
   } catch (error) {
-    console.error('Failed to create search:', error)
+    searchError.value = error instanceof Error ? error.message : 'Search is temporarily unavailable.'
   } finally {
     isCreatingSearch.value = false
   }
@@ -74,7 +79,8 @@ const handleSearch = async (query: string) => {
             </p>
 
             <div class="mt-8 sm:mt-10">
-              <SearchBar :isLoading="isCreatingSearch" @search="handleSearch" />
+              <SearchBar :isLoading="isCreatingSearch" :capabilities="capabilities" @search="handleSearch" />
+              <p v-if="searchError" role="alert" class="mt-3 text-sm text-red-800">{{ searchError }}</p>
             </div>
           </div>
         </div>
